@@ -56,7 +56,7 @@ func (dro DirectReferralOpinion) XXX() {
 			return true
 		}
 
-		for visited, stack := map[uint64]bool{to: true}, []uint64{to}; len(stack) > 0;  {
+		for visited, stack := map[uint64]bool{to: true}, []uint64{to}; len(stack) > 0; {
 			n := len(stack) - 1
 			to = stack[n]
 			stack = stack[:n]
@@ -141,16 +141,6 @@ func (l *plusList) IsFullUncertainty() bool { return len(*l) == 0 }
 type r Link
 
 func (r r) String() string { return fmt.Sprintf("R[%v,%v]", r.From, r.To) }
-
-func (r r) Plus(p Equation) Equation {
-	if p.IsFullUncertainty() {
-		return r
-	}
-	res := []Equation{r, p}
-	return (*plusList)(&res)
-}
-
-func (r r) IsFullUncertainty() bool { return false }
 
 // direct referral trust A[i,j]
 type a Link
