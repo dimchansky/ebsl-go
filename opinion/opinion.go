@@ -1,7 +1,7 @@
 package opinion
 
 import (
-	"math"
+	"fmt"
 
 	"github.com/dimchansky/ebsl-go/evidence"
 )
@@ -10,23 +10,28 @@ type Type struct {
 	B, D, U float64
 }
 
+func (x *Type) String() string {
+	return fmt.Sprintf("{B: %v, D: %v, U: %v}", x.B, x.D, x.U)
+}
+
 func New(b, d, u float64) *Type {
 	return &Type{B: b, D: d, U: u}
 }
 
-func FromEvidence(c uint64, e *evidence.Type) *Type {
-	k := float64(c + e.P + e.N)
-	return &Type{
-		B: float64(e.P) / k,
-		D: float64(e.N) / k,
-		U: float64(c) / k,
-	}
+func FromEvidence(c uint64, e *evidence.Type) *Type { return new(Type).FromEvidence(c, e) }
+
+func (x *Type) FromEvidence(c uint64, e *evidence.Type) *Type {
+	k := float64(c) + e.P + e.N
+	x.B = e.P / k
+	x.D = e.N / k
+	x.U = float64(c) / k
+	return x
 }
 
 func (x *Type) ToEvidence(c uint64) *evidence.Type {
-	p := math.Round(float64(c) * x.B / x.U)
-	n := math.Round(float64(c) * x.D / x.U)
-	return evidence.New(uint64(p), uint64(n))
+	p := float64(c) * x.B / x.U
+	n := float64(c) * x.D / x.U
+	return evidence.New(p, n)
 }
 
 func FullBelief() *Type {
@@ -64,4 +69,13 @@ func (x *Type) Plus(y *Type) *Type {
 	return x
 }
 
-// x⊠y
+// PlusMul sets x to the x⊕(α·y) and returns x.
+func (x *Type) PlusMul(α float64, y *Type) *Type {
+	xu := x.U
+	yu := y.U
+	k := yu + α*xu*(1-yu)
+	x.B = (α*xu*y.B + yu*x.B) / k
+	x.D = (α*xu*y.D + yu*x.D) / k
+	x.U = xu * yu / k
+	return x
+}
