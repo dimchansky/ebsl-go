@@ -1,9 +1,6 @@
 package trust
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/dimchansky/ebsl-go/evidence"
 	"github.com/dimchansky/ebsl-go/opinion"
 )
@@ -25,7 +22,7 @@ func (dre DirectReferralEvidence) ToDirectReferralOpinion(c uint64) DirectReferr
 
 type DirectReferralOpinion map[Link]*opinion.Type
 
-func (dro DirectReferralOpinion) XXX() {
+func (dro DirectReferralOpinion) CreateFinalReferralTrustEquations() []*FinalReferralTrustEquation {
 	type uint64Set map[uint64]bool
 
 	uniques := make(uint64Set)
@@ -76,7 +73,7 @@ func (dro DirectReferralOpinion) XXX() {
 		return false
 	}
 
-	rEquations := make(map[r]Equation)
+	var rEquations []*FinalReferralTrustEquation
 	// generate equations for final referral trust (R)
 	for from := range uniques {
 		for to, referrals := range referralsTo {
@@ -85,91 +82,113 @@ func (dro DirectReferralOpinion) XXX() {
 				// R[from,from] = full belief (skip it)
 				continue
 			}
-			var rEq Equation = u{}
+			var rEq equation = u{}
 			for k := range referrals {
 				if k == from { // diagonal in R equal to full belief
-					rEq = rEq.Plus(a{k, to})
+					rEq = rEq.plus(A{k, to})
 				} else if k != to && // diagonal in A equal to full uncertainty
 					isReachable(from, k) { // should exists path from "from" to "k"
-					rEq = rEq.Plus(discount{r{from, k}, a{k, to}})
+					rEq = rEq.plus(discountingRule{R{from, k}, A{k, to}})
 				}
 			}
 
-			if !rEq.IsFullUncertainty() {
-				fmt.Println(r{from, to}, "=", rEq)
-				rEquations[r{from, to}] = rEq
+			if !rEq.isFullUncertainty() {
+				rEquations = append(rEquations,
+					&FinalReferralTrustEquation{
+						R:        R{from, to},
+						Equation: rEq,
+					})
 			}
 		}
 	}
+
+	return rEquations
+}
+
+// EquationVisitor is A visitor for Equation
+type EquationVisitor interface {
+	VisitFullUncertainty()
+	VisitDiscountingRule(r R, a A)
+	VisitDirectReferralTrust(a A)
+	VisitConsensusStart()
+	VisitConsensusOpinion(index int, equation Equation)
+	VisitConsensusEnd()
 }
 
 // Equation represents final referral trust equation
 type Equation interface {
-	fmt.Stringer
-	Plus(p Equation) Equation
-	IsFullUncertainty() bool
+	Accept(v EquationVisitor)
+}
+
+// Equation represents final referral trust equation
+type equation interface {
+	Equation
+	plus(p equation) equation
+	isFullUncertainty() bool
+}
+
+// FinalReferralTrustEquation represents final reference trust equation: R = Equation
+type FinalReferralTrustEquation struct {
+	R        R
+	Equation Equation
 }
 
 // full uncertainty
 type u struct{}
 
-func (u) String() string           { return "U" }
-func (u) Plus(p Equation) Equation { return p }
-func (u) IsFullUncertainty() bool  { return true }
+func (u) plus(p equation) equation { return p }
+func (u) isFullUncertainty() bool  { return true }
+func (u) Accept(v EquationVisitor) { v.VisitFullUncertainty() }
 
-// ⊗ (plus operation on a list)
-type plusList []Equation
+// ⊕ (plus operation on A list)
+type consensusList []equation
 
-func (l *plusList) String() string {
-	ss := make([]string, len(*l))
-	for i, p := range *l {
-		ss[i] = p.String()
-	}
-	return strings.Join(ss, " ⊗ ")
-}
-
-func (l *plusList) Plus(p Equation) Equation {
-	if !p.IsFullUncertainty() {
+func (l *consensusList) plus(p equation) equation {
+	if !p.isFullUncertainty() {
 		*l = append(*l, p)
 	}
 	return l
 }
 
-func (l *plusList) IsFullUncertainty() bool { return len(*l) == 0 }
+func (l *consensusList) isFullUncertainty() bool { return len(*l) == 0 }
+
+func (l *consensusList) Accept(v EquationVisitor) {
+	v.VisitConsensusStart()
+	for idx, value := range *l {
+		v.VisitConsensusOpinion(idx, value)
+	}
+	v.VisitConsensusEnd()
+}
 
 // final referral trust R[i,j]
-type r Link
-
-func (r r) String() string { return fmt.Sprintf("R[%v,%v]", r.From, r.To) }
+type R Link
 
 // direct referral trust A[i,j]
-type a Link
+type A Link
 
-func (a a) String() string { return fmt.Sprintf("A[%v,%v]", a.From, a.To) }
-
-func (a a) Plus(p Equation) Equation {
-	if p.IsFullUncertainty() {
+func (a A) plus(p equation) equation {
+	if p.isFullUncertainty() {
 		return a
 	}
-	res := []Equation{a, p}
-	return (*plusList)(&res)
+	res := []equation{a, p}
+	return (*consensusList)(&res)
 }
 
-func (a a) IsFullUncertainty() bool { return false }
+func (a A) isFullUncertainty() bool { return false }
 
-// discount R[i,j] ⊗ A[i,j]
-type discount struct {
-	r r
-	a a
+func (a A) Accept(v EquationVisitor) { v.VisitDirectReferralTrust(a) }
+
+// discountingRule R[i,j] ⊠ A[i,j]
+type discountingRule struct {
+	r R
+	a A
 }
 
-func (d discount) String() string {
-	return fmt.Sprintf("(%v ⊗ %v)", d.r.String(), d.a.String())
+func (d discountingRule) plus(p equation) equation {
+	res := []equation{d, p}
+	return (*consensusList)(&res)
 }
 
-func (d discount) Plus(p Equation) Equation {
-	res := []Equation{d, p}
-	return (*plusList)(&res)
-}
+func (d discountingRule) isFullUncertainty() bool { return false }
 
-func (d discount) IsFullUncertainty() bool { return false }
+func (d discountingRule) Accept(v EquationVisitor) { v.VisitDiscountingRule(d.r, d.a) }
