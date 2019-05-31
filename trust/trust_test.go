@@ -13,40 +13,50 @@ type expressionStringer struct {
 	strings.Builder
 }
 
-func (s *expressionStringer) VisitFullUncertainty() {
-	_, _ = s.WriteString("U")
+func (s *expressionStringer) VisitFullUncertainty() (err error) {
+	_, err = s.WriteString("U")
+	return
 }
 
-func (s *expressionStringer) VisitDiscountingRule(r trust.Link, a trust.Link) {
-	_, _ = s.WriteString(fmt.Sprintf("(%v ⊠ %v)", rToString(r), aToString(a)))
+func (s *expressionStringer) VisitDiscountingRule(r trust.Link, a trust.Link) (err error) {
+	_, err = s.WriteString(fmt.Sprintf("(%v ⊠ %v)", rToString(r), aToString(a)))
+	return
 }
 
-func (s *expressionStringer) VisitDirectReferralTrust(a trust.Link) {
-	_, _ = s.WriteString(aToString(a))
+func (s *expressionStringer) VisitDirectReferralTrust(a trust.Link) (err error) {
+	_, err = s.WriteString(aToString(a))
+	return
 }
 
-func (s *expressionStringer) VisitConsensusListStart(count int) {
+func (s *expressionStringer) VisitConsensusListStart(count int) (err error) {
+	return nil
 }
 
-func (s *expressionStringer) VisitConsensusList(index int, equation trust.Expression) {
+func (s *expressionStringer) VisitConsensusList(index int, equation trust.Expression) (err error) {
 	eqStr := eqToString(equation)
 
 	if index == 0 {
-		_, _ = s.WriteString(eqStr)
+		_, err = s.WriteString(eqStr)
 	} else {
-		_, _ = s.WriteString(" ⊕ ")
-		_, _ = s.WriteString(eqStr)
+		if _, err = s.WriteString(" ⊕ "); err != nil {
+			return
+		}
+		_, err = s.WriteString(eqStr)
 	}
+	return
 }
 
-func (s *expressionStringer) VisitConsensusListEnd() {
+func (s *expressionStringer) VisitConsensusListEnd() (err error) {
+	return nil
 }
 
 func rToString(r trust.Link) string { return fmt.Sprintf("R[%v,%v]", r.From, r.To) }
 func aToString(a trust.Link) string { return fmt.Sprintf("A[%v,%v]", a.From, a.To) }
 func eqToString(expr trust.Expression) string {
 	s := &expressionStringer{}
-	expr.Accept(s)
+	if err := expr.Accept(s); err != nil {
+		return err.Error()
+	}
 	return s.String()
 }
 func frtEqToString(eq *trust.FinalReferralTrustEquation) string {

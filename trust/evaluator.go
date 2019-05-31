@@ -18,9 +18,8 @@ type ExpressionContext interface {
 
 func EvaluateExpression(context ExpressionContext, expression Expression) (*opinion.Type, error) {
 	ev := &expressionEvaluator{context: context}
-	expression.Accept(ev)
-	if ev.err != nil {
-		return nil, ev.err
+	if err := expression.Accept(ev); err != nil {
+		return nil, err
 	}
 	if ev.state != evaluated {
 		return nil, ErrInvalidExpression
@@ -39,30 +38,20 @@ const (
 type expressionEvaluator struct {
 	context ExpressionContext
 	result  *opinion.Type
-	err     error
 	state   evaluatorState
 }
 
-func (ev *expressionEvaluator) VisitFullUncertainty() {
-	if ev.err != nil {
-		return
+func (ev *expressionEvaluator) VisitFullUncertainty() error {
+	if ev.state != notEvaluated {
+		return ErrInvalidExpression
 	}
 
-	switch ev.state {
-	case notEvaluated:
-		ev.result = opinion.FullUncertainty()
-		ev.state = evaluated
-	default:
-		ev.err = ErrInvalidExpression
-		return
-	}
+	ev.result = opinion.FullUncertainty()
+	ev.state = evaluated
+	return nil
 }
 
-func (ev *expressionEvaluator) VisitDiscountingRule(r Link, a Link) {
-	if ev.err != nil {
-		return
-	}
-
+func (ev *expressionEvaluator) VisitDiscountingRule(r Link, a Link) (err error) {
 	switch ev.state {
 	case notEvaluated:
 		ctx := ev.context
@@ -79,16 +68,12 @@ func (ev *expressionEvaluator) VisitDiscountingRule(r Link, a Link) {
 
 		ev.result.PlusMul(alpha, ctx.A(a))
 	default:
-		ev.err = ErrInvalidExpression
-		return
+		err = ErrInvalidExpression
 	}
+	return
 }
 
-func (ev *expressionEvaluator) VisitDirectReferralTrust(a Link) {
-	if ev.err != nil {
-		return
-	}
-
+func (ev *expressionEvaluator) VisitDirectReferralTrust(a Link) (err error) {
 	switch ev.state {
 	case notEvaluated:
 		ctx := ev.context
@@ -102,42 +87,34 @@ func (ev *expressionEvaluator) VisitDirectReferralTrust(a Link) {
 
 		ev.result.Plus(ctx.A(a))
 	default:
-		ev.err = ErrInvalidExpression
-		return
+		err = ErrInvalidExpression
 	}
+	return
 }
 
-func (ev *expressionEvaluator) VisitConsensusListStart(count int) {
-	if ev.err != nil {
-		return
-	}
+func (ev *expressionEvaluator) VisitConsensusListStart(count int) error {
 	if ev.state != notEvaluated {
-		ev.err = ErrInvalidExpression
-		return
+		return ErrInvalidExpression
 	}
+
 	ev.state = consensus
 	ev.result = opinion.FullUncertainty()
+	return nil
 }
 
-func (ev *expressionEvaluator) VisitConsensusList(index int, equation Expression) {
-	if ev.err != nil {
-		return
-	}
+func (ev *expressionEvaluator) VisitConsensusList(index int, equation Expression) error {
 	if ev.state != consensus {
-		ev.err = ErrInvalidExpression
-		return
+		return ErrInvalidExpression
 	}
 
-	equation.Accept(ev)
+	return equation.Accept(ev)
 }
 
-func (ev *expressionEvaluator) VisitConsensusListEnd() {
-	if ev.err != nil {
-		return
-	}
+func (ev *expressionEvaluator) VisitConsensusListEnd() error {
 	if ev.state != consensus {
-		ev.err = ErrInvalidExpression
-		return
+		return ErrInvalidExpression
 	}
+	
 	ev.state = evaluated
+	return nil
 }

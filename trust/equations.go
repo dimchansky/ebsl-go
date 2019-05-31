@@ -4,12 +4,12 @@ import "sort"
 
 // ExpressionVisitor is A visitor for Expression
 type ExpressionVisitor interface {
-	VisitFullUncertainty()
-	VisitDiscountingRule(r Link, a Link)
-	VisitDirectReferralTrust(a Link)
-	VisitConsensusListStart(count int)
-	VisitConsensusList(index int, equation Expression)
-	VisitConsensusListEnd()
+	VisitFullUncertainty() error
+	VisitDiscountingRule(r Link, a Link) error
+	VisitDirectReferralTrust(a Link) error
+	VisitConsensusListStart(count int) error
+	VisitConsensusList(index int, equation Expression) error
+	VisitConsensusListEnd() error
 }
 
 // Expression represents final referral trust expression
@@ -18,7 +18,7 @@ type Expression interface {
 	IsDiscountingRule() bool
 	IsDirectReferralTrust() bool
 	IsConsensusList() bool
-	Accept(v ExpressionVisitor)
+	Accept(v ExpressionVisitor) error
 }
 
 // FinalReferralTrustEquation represents final reference trust expression: R = Expression
@@ -144,7 +144,7 @@ func (u) IsFullUncertainty() bool            { return true }
 func (u) IsDiscountingRule() bool            { return false }
 func (u) IsDirectReferralTrust() bool        { return false }
 func (u) IsConsensusList() bool              { return false }
-func (u) Accept(v ExpressionVisitor)         { v.VisitFullUncertainty() }
+func (u) Accept(v ExpressionVisitor) error   { return v.VisitFullUncertainty() }
 
 // ⊕ (circlePlus operation on A list)
 type consensusList []expression
@@ -160,12 +160,16 @@ func (l *consensusList) IsFullUncertainty() bool     { return len(*l) == 0 }
 func (l *consensusList) IsDiscountingRule() bool     { return false }
 func (l *consensusList) IsDirectReferralTrust() bool { return false }
 func (l *consensusList) IsConsensusList() bool       { return true }
-func (l *consensusList) Accept(v ExpressionVisitor) {
-	v.VisitConsensusListStart(len(*l))
-	for idx, value := range *l {
-		v.VisitConsensusList(idx, value)
+func (l *consensusList) Accept(v ExpressionVisitor) (err error) {
+	if err = v.VisitConsensusListStart(len(*l)); err != nil {
+		return
 	}
-	v.VisitConsensusListEnd()
+	for idx, value := range *l {
+		if err = v.VisitConsensusList(idx, value); err != nil {
+			return
+		}
+	}
+	return v.VisitConsensusListEnd()
 }
 
 // final referral trust R[i,j]
@@ -182,11 +186,11 @@ func (a A) circlePlus(p expression) expression {
 	return (*consensusList)(&res)
 }
 
-func (a A) IsFullUncertainty() bool     { return false }
-func (a A) IsDiscountingRule() bool     { return false }
-func (a A) IsDirectReferralTrust() bool { return true }
-func (a A) IsConsensusList() bool       { return false }
-func (a A) Accept(v ExpressionVisitor)  { v.VisitDirectReferralTrust(Link(a)) }
+func (a A) IsFullUncertainty() bool          { return false }
+func (a A) IsDiscountingRule() bool          { return false }
+func (a A) IsDirectReferralTrust() bool      { return true }
+func (a A) IsConsensusList() bool            { return false }
+func (a A) Accept(v ExpressionVisitor) error { return v.VisitDirectReferralTrust(Link(a)) }
 
 // discountingRule R[i,j] ⊠ A[i,j]
 type discountingRule struct {
@@ -203,4 +207,6 @@ func (d discountingRule) IsFullUncertainty() bool     { return false }
 func (d discountingRule) IsDiscountingRule() bool     { return true }
 func (d discountingRule) IsDirectReferralTrust() bool { return false }
 func (d discountingRule) IsConsensusList() bool       { return false }
-func (d discountingRule) Accept(v ExpressionVisitor)  { v.VisitDiscountingRule(Link(d.r), Link(d.a)) }
+func (d discountingRule) Accept(v ExpressionVisitor) error {
+	return v.VisitDiscountingRule(Link(d.r), Link(d.a))
+}
