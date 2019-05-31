@@ -59,33 +59,7 @@ func (e *Equation) Evaluate(context Context) (res *opinion.Type, err error) {
 
 // CreateEquations creates equations for the final referral trust
 func CreateEquations(links trust.IterableLinks) []*Equation {
-	type uint64Set map[uint64]bool
-
-	uniques := make(uint64Set)
-	referralsTo := make(map[uint64]uint64Set)
-
-	foreachLink := links.GetLinkIterator()
-	// build graph with referrals and uniques
-	_ = foreachLink(func(ref trust.Link) error {
-		from := ref.From
-		to := ref.To
-
-		if !uniques[to] {
-			uniques[to] = true
-		}
-		if !uniques[from] {
-			uniques[from] = true
-		}
-
-		referrals := referralsTo[to]
-		if referrals == nil {
-			referrals = make(uint64Set)
-			referralsTo[to] = referrals
-		}
-		referrals[from] = true
-
-		return nil
-	})
+	uniques, referralsTo := getUniquesAndReferralsTo(links)
 
 	// TODO: optimize for all nodes
 	isReachable := func(from, to uint64) bool {
@@ -143,6 +117,13 @@ func CreateEquations(links trust.IterableLinks) []*Equation {
 	}
 
 	// order equations by direct first, then by indices
+	orderEquationsByDirectRefAndIndices(rEquations)
+
+	return rEquations
+}
+
+// orderEquationsByDirectRefAndIndices orders equations so that direct referral equations go first and the all equations are ordered by indices of R
+func orderEquationsByDirectRefAndIndices(rEquations []*Equation) {
 	sort.Slice(rEquations, func(i, j int) bool {
 		iEq := rEquations[i]
 		jEq := rEquations[j]
@@ -161,8 +142,39 @@ func CreateEquations(links trust.IterableLinks) []*Equation {
 
 		return iEq.R.To < jEq.R.To
 	})
+}
 
-	return rEquations
+type uint64Set map[uint64]bool
+
+// getUniquesAndReferralsTo collects all uniques from the links and creates index with referrals to each node
+func getUniquesAndReferralsTo(links trust.IterableLinks) (uniques uint64Set, referralsTo map[uint64]uint64Set) {
+	uniques = make(uint64Set)
+	referralsTo = make(map[uint64]uint64Set)
+
+	foreachLink := links.GetLinkIterator()
+	// build graph with referrals and uniques
+	_ = foreachLink(func(ref trust.Link) error {
+		from := ref.From
+		to := ref.To
+
+		if !uniques[to] {
+			uniques[to] = true
+		}
+		if !uniques[from] {
+			uniques[from] = true
+		}
+
+		referrals := referralsTo[to]
+		if referrals == nil {
+			referrals = make(uint64Set)
+			referralsTo[to] = referrals
+		}
+		referrals[from] = true
+
+		return nil
+	})
+
+	return
 }
 
 // Expression represents final referral trust expression
