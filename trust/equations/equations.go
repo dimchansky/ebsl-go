@@ -3,10 +3,11 @@ package equations
 import (
 	"sort"
 
+	"github.com/dimchansky/ebsl-go/opinion"
 	"github.com/dimchansky/ebsl-go/trust"
 )
 
-// ExpressionVisitor is A visitor for Expression
+// ExpressionVisitor is a visitor for Expression
 type ExpressionVisitor interface {
 	VisitFullUncertainty() error
 	VisitDiscountingRule(r trust.Link, a trust.Link) error
@@ -25,13 +26,39 @@ type Expression interface {
 	Accept(v ExpressionVisitor) error
 }
 
-// FinalReferralTrustEquation represents final reference trust expression: R = Expression
-type FinalReferralTrustEquation struct {
-	R          trust.Link
+// Equation represents final referral trust equation: R[i, j] = Expression
+type Equation struct {
+	// R represents R[i, j] - i's (possibly indirect) opinion about the trustworthiness of j
+	R trust.Link
+	// Expression of R[i, j]
 	Expression Expression
 }
 
-func CreateFinalReferralTrustEquations(links trust.IterableLinks) []*FinalReferralTrustEquation {
+// ExpressionContext to evaluate expression of final referral trust equation
+type ExpressionContext interface {
+	GetDirectReferralTrust(link trust.Link) *opinion.Type
+	GetFinalReferralTrust(link trust.Link) *opinion.Type
+	GetDiscount(*opinion.Type) float64
+}
+
+// Context to evaluate final referral trust equation
+type Context interface {
+	ExpressionContext
+	// SetFinalReferralTrust used to update evaluated expression value
+	SetFinalReferralTrust(link trust.Link, value *opinion.Type)
+}
+
+// Evaluate evaluates new final referral value from equation expression and updates final referral trust with the new value.
+func (e *Equation) Evaluate(context Context) (res *opinion.Type, err error) {
+	res, err = EvaluateExpression(context, e.Expression)
+	if err == nil {
+		context.SetFinalReferralTrust(e.R, res)
+	}
+	return res, err
+}
+
+// CreateEquations creates equations for the final referral trust
+func CreateEquations(links trust.IterableLinks) []*Equation {
 	type uint64Set map[uint64]bool
 
 	uniques := make(uint64Set)
@@ -86,7 +113,7 @@ func CreateFinalReferralTrustEquations(links trust.IterableLinks) []*FinalReferr
 		return false
 	}
 
-	var rEquations []*FinalReferralTrustEquation
+	var rEquations []*Equation
 	// generate equations for final referral trust (R)
 	for from := range uniques {
 		for to, referrals := range referralsTo {
@@ -107,7 +134,7 @@ func CreateFinalReferralTrustEquations(links trust.IterableLinks) []*FinalReferr
 
 			if !rExp.IsFullUncertainty() {
 				rEquations = append(rEquations,
-					&FinalReferralTrustEquation{
+					&Equation{
 						R:          trust.Link{From: from, To: to},
 						Expression: rExp,
 					})

@@ -19,7 +19,7 @@ func TestExample(t *testing.T) {
 		trust.Link{From: 3, To: 2}: evidence.New(1, 1),
 	}.ToDirectReferralOpinion(c)
 
-	logEquations(t, equations.CreateFinalReferralTrustEquations(a))
+	logEquations(t, equations.CreateEquations(a))
 }
 
 func TestExample2(t *testing.T) {
@@ -36,10 +36,10 @@ func TestExample2(t *testing.T) {
 		trust.Link{From: 6, To: 7}: evidence.New(1, 1),
 	}.ToDirectReferralOpinion(c)
 
-	logEquations(t, equations.CreateFinalReferralTrustEquations(a))
+	logEquations(t, equations.CreateEquations(a))
 }
 
-func logEquations(t *testing.T, eqs []*equations.FinalReferralTrustEquation) {
+func logEquations(t *testing.T, eqs []*equations.Equation) {
 	for _, eq := range eqs {
 		t.Log(frtEqToString(eq))
 	}
@@ -57,7 +57,7 @@ func eqToString(expr equations.Expression) string {
 	return s.String()
 }
 
-func frtEqToString(eq *equations.FinalReferralTrustEquation) string {
+func frtEqToString(eq *equations.Equation) string {
 	return rToString(eq.R) + " = " + eqToString(eq.Expression)
 }
 

@@ -11,12 +11,6 @@ var (
 	ErrInvalidExpression = errors.New("trust: invalid expression")
 )
 
-type ExpressionContext interface {
-	R(link trust.Link) *opinion.Type
-	A(link trust.Link) *opinion.Type
-	G(*opinion.Type) float64
-}
-
 func EvaluateExpression(context ExpressionContext, expression Expression) (*opinion.Type, error) {
 	ev := &expressionEvaluator{context: context}
 	if err := expression.Accept(ev); err != nil {
@@ -57,17 +51,17 @@ func (ev *expressionEvaluator) VisitDiscountingRule(r trust.Link, a trust.Link) 
 	case notEvaluated:
 		ctx := ev.context
 
-		alpha := ctx.G(ctx.R(r))
-		aOp := *ctx.A(a)
+		alpha := ctx.GetDiscount(ctx.GetDirectReferralTrust(r))
+		aOp := *ctx.GetFinalReferralTrust(a)
 
 		ev.result = aOp.Mul(alpha)
 		ev.state = evaluated
 	case consensus:
 		ctx := ev.context
 
-		alpha := ctx.G(ctx.R(r))
+		alpha := ctx.GetDiscount(ctx.GetDirectReferralTrust(r))
 
-		ev.result.PlusMul(alpha, ctx.A(a))
+		ev.result.PlusMul(alpha, ctx.GetFinalReferralTrust(a))
 	default:
 		err = ErrInvalidExpression
 	}
@@ -79,14 +73,14 @@ func (ev *expressionEvaluator) VisitDirectReferralTrust(a trust.Link) (err error
 	case notEvaluated:
 		ctx := ev.context
 
-		aOp := *ctx.A(a)
+		aOp := *ctx.GetFinalReferralTrust(a)
 
 		ev.result = &aOp
 		ev.state = evaluated
 	case consensus:
 		ctx := ev.context
 
-		ev.result.Plus(ctx.A(a))
+		ev.result.Plus(ctx.GetFinalReferralTrust(a))
 	default:
 		err = ErrInvalidExpression
 	}
