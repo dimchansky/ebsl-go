@@ -90,10 +90,10 @@ func CreateFinalReferralTrustEquations(dro DirectReferralOpinion) []*FinalReferr
 			var rExp expression = u{}
 			for k := range referrals {
 				if k == from { // diagonal in R equal to full belief
-					rExp = rExp.circlePlus(A{k, to})
+					rExp = rExp.circlePlus(a{k, to})
 				} else if k != to && // diagonal in A equal to full uncertainty
 					isReachable(from, k) { // should exists path from "from" to "k"
-					rExp = rExp.circlePlus(discountingRule{R{from, k}, A{k, to}})
+					rExp = rExp.circlePlus(discountingRule{r{from, k}, a{k, to}})
 				}
 			}
 
@@ -173,12 +173,12 @@ func (l *consensusList) Accept(v ExpressionVisitor) (err error) {
 }
 
 // final referral trust R[i,j]
-type R Link
+type r Link
 
 // direct referral trust A[i,j]
-type A Link
+type a Link
 
-func (a A) circlePlus(p expression) expression {
+func (a a) circlePlus(p expression) expression {
 	if p.IsFullUncertainty() {
 		return a
 	}
@@ -186,16 +186,16 @@ func (a A) circlePlus(p expression) expression {
 	return (*consensusList)(&res)
 }
 
-func (a A) IsFullUncertainty() bool          { return false }
-func (a A) IsDiscountingRule() bool          { return false }
-func (a A) IsDirectReferralTrust() bool      { return true }
-func (a A) IsConsensusList() bool            { return false }
-func (a A) Accept(v ExpressionVisitor) error { return v.VisitDirectReferralTrust(Link(a)) }
+func (a a) IsFullUncertainty() bool          { return false }
+func (a a) IsDiscountingRule() bool          { return false }
+func (a a) IsDirectReferralTrust() bool      { return true }
+func (a a) IsConsensusList() bool            { return false }
+func (a a) Accept(v ExpressionVisitor) error { return v.VisitDirectReferralTrust(Link(a)) }
 
 // discountingRule R[i,j] ⊠ A[i,j]
 type discountingRule struct {
-	r R
-	a A
+	r r
+	a a
 }
 
 func (d discountingRule) circlePlus(p expression) expression {
