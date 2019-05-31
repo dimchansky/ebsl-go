@@ -13,4 +13,3 @@ func (e *Type) String() string {
 func New(p, n float64) *Type {
 	return &Type{P: p, N: n}
 }
-

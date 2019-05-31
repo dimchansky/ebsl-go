@@ -114,7 +114,7 @@ func (ev *expressionEvaluator) VisitConsensusListEnd() error {
 	if ev.state != consensus {
 		return ErrInvalidExpression
 	}
-	
+
 	ev.state = evaluated
 	return nil
 }
