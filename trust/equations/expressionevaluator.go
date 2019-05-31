@@ -53,17 +53,17 @@ func (ev *expressionEvaluator) VisitDiscountingRule(r trust.Link, a trust.Link) 
 	case notEvaluated:
 		ctx := ev.context
 
-		alpha := ctx.GetDiscount(ctx.GetDirectReferralTrust(r))
-		aOp := *ctx.GetFinalReferralTrust(a)
+		alpha := ctx.GetDiscount(ctx.GetFinalReferralTrust(r))
+		aOp := *ctx.GetDirectReferralTrust(a)
 
 		ev.result = aOp.Mul(alpha)
 		ev.state = evaluated
 	case consensus:
 		ctx := ev.context
 
-		alpha := ctx.GetDiscount(ctx.GetDirectReferralTrust(r))
+		alpha := ctx.GetDiscount(ctx.GetFinalReferralTrust(r))
 
-		ev.result.PlusMul(alpha, ctx.GetFinalReferralTrust(a))
+		ev.result.PlusMul(alpha, ctx.GetDirectReferralTrust(a))
 	default:
 		err = ErrInvalidExpression
 	}
@@ -75,14 +75,14 @@ func (ev *expressionEvaluator) VisitDirectReferralTrust(a trust.Link) (err error
 	case notEvaluated:
 		ctx := ev.context
 
-		aOp := *ctx.GetFinalReferralTrust(a)
+		aOp := *ctx.GetDirectReferralTrust(a)
 
 		ev.result = &aOp
 		ev.state = evaluated
 	case consensus:
 		ctx := ev.context
 
-		ev.result.Plus(ctx.GetFinalReferralTrust(a))
+		ev.result.Plus(ctx.GetDirectReferralTrust(a))
 	default:
 		err = ErrInvalidExpression
 	}

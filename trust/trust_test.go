@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/dimchansky/ebsl-go/evidence"
+	"github.com/dimchansky/ebsl-go/opinion"
 	"github.com/dimchansky/ebsl-go/trust"
 	"github.com/dimchansky/ebsl-go/trust/equations"
 )
@@ -19,7 +20,48 @@ func TestExample(t *testing.T) {
 		trust.Link{From: 3, To: 2}: evidence.New(1, 1),
 	}.ToDirectReferralOpinion(c)
 
-	logEquations(t, equations.CreateEquations(a))
+	eqs := equations.CreateEquations(a)
+	logEquations(t, eqs)
+
+	ctx := &ctx{
+		a: a,
+		r: make(trust.FinalReferralOpinion),
+	}
+	for i := 1; i <= 10; i++ {
+		t.Log("--- epoch", i)
+		for _, eq := range eqs {
+			rVal, _ := eq.Evaluate(ctx)
+			t.Log(rToString(eq.R), rVal)
+		}
+	}
+}
+
+type ctx struct {
+	a trust.DirectReferralOpinion
+	r trust.FinalReferralOpinion
+}
+
+func (c *ctx) GetDirectReferralTrust(link trust.Link) *opinion.Type {
+	res, ok := c.a[link]
+	if !ok {
+		panic(fmt.Sprintf("direct referral trust not found: [%v, %v]", link.From, link.To))
+	}
+	return res
+}
+
+func (c *ctx) GetFinalReferralTrust(link trust.Link) *opinion.Type {
+	if res, ok := c.r[link]; ok {
+		return res
+	}
+	return opinion.FullBelief()
+}
+
+func (c *ctx) GetDiscount(o *opinion.Type) float64 {
+	return o.B
+}
+
+func (c *ctx) SetFinalReferralTrust(link trust.Link, value *opinion.Type) {
+	c.r[link] = value
 }
 
 func TestExample2(t *testing.T) {
