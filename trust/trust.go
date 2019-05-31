@@ -5,23 +5,29 @@ import (
 	"github.com/dimchansky/ebsl-go/opinion"
 )
 
+// Link represents trust direction
 type Link struct {
 	From uint64
 	To   uint64
 }
 
-type LinkHandler func(Link) error
+// NextLinkHandler handles next link and returns error
+type NextLinkHandler func(Link) error
 
-type LinkIterator func(LinkHandler) error
+// LinkIterator used as `foreach` to handle all links
+type LinkIterator func(NextLinkHandler) error
 
+// IterableLinks allows to iterate over all links
 type IterableLinks interface {
 	GetLinkIterator() LinkIterator
 }
 
+// DirectReferralEvidence represents direct referral trust matrix in evidence space
 type DirectReferralEvidence map[Link]*evidence.Type
 
+// GetLinkIterator implements IterableLinks interface
 func (dre DirectReferralEvidence) GetLinkIterator() LinkIterator {
-	return func(onNext LinkHandler) error {
+	return func(onNext NextLinkHandler) error {
 		for link := range dre {
 			if err := onNext(link); err != nil {
 				return err
@@ -32,6 +38,7 @@ func (dre DirectReferralEvidence) GetLinkIterator() LinkIterator {
 	}
 }
 
+// ToDirectReferralOpinion transforms direct referral trust matrix to opinion space
 func (dre DirectReferralEvidence) ToDirectReferralOpinion(c uint64) DirectReferralOpinion {
 	res := make(DirectReferralOpinion, len(dre))
 	for ref, ev := range dre {
@@ -40,10 +47,12 @@ func (dre DirectReferralEvidence) ToDirectReferralOpinion(c uint64) DirectReferr
 	return res
 }
 
+// DirectReferralOpinion represents direct referral trust matrix in opinion space
 type DirectReferralOpinion map[Link]*opinion.Type
 
+// GetLinkIterator implements IterableLinks interface
 func (dro DirectReferralOpinion) GetLinkIterator() LinkIterator {
-	return func(onNext LinkHandler) error {
+	return func(onNext NextLinkHandler) error {
 		for link := range dro {
 			if err := onNext(link); err != nil {
 				return err
@@ -54,4 +63,5 @@ func (dro DirectReferralOpinion) GetLinkIterator() LinkIterator {
 	}
 }
 
-type FinalReferralTrust map[Link]*opinion.Type
+// FinalReferralOpinion represents final referral trust matrix in opinion space
+type FinalReferralOpinion map[Link]*opinion.Type
