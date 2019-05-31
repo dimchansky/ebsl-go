@@ -7,6 +7,7 @@ import (
 
 	"github.com/dimchansky/ebsl-go/evidence"
 	"github.com/dimchansky/ebsl-go/trust"
+	"github.com/dimchansky/ebsl-go/trust/equations"
 )
 
 func TestExample(t *testing.T) {
@@ -18,7 +19,7 @@ func TestExample(t *testing.T) {
 		trust.Link{From: 3, To: 2}: evidence.New(1, 1),
 	}.ToDirectReferralOpinion(c)
 
-	logEquations(t, trust.CreateFinalReferralTrustEquations(a))
+	logEquations(t, equations.CreateFinalReferralTrustEquations(a))
 }
 
 func TestExample2(t *testing.T) {
@@ -35,10 +36,10 @@ func TestExample2(t *testing.T) {
 		trust.Link{From: 6, To: 7}: evidence.New(1, 1),
 	}.ToDirectReferralOpinion(c)
 
-	logEquations(t, trust.CreateFinalReferralTrustEquations(a))
+	logEquations(t, equations.CreateFinalReferralTrustEquations(a))
 }
 
-func logEquations(t *testing.T, eqs []*trust.FinalReferralTrustEquation) {
+func logEquations(t *testing.T, eqs []*equations.FinalReferralTrustEquation) {
 	for _, eq := range eqs {
 		t.Log(frtEqToString(eq))
 	}
@@ -48,7 +49,7 @@ func rToString(r trust.Link) string { return fmt.Sprintf("R[%v,%v]", r.From, r.T
 
 func aToString(a trust.Link) string { return fmt.Sprintf("A[%v,%v]", a.From, a.To) }
 
-func eqToString(expr trust.Expression) string {
+func eqToString(expr equations.Expression) string {
 	s := &expressionStringer{}
 	if err := expr.Accept(s); err != nil {
 		return err.Error()
@@ -56,7 +57,7 @@ func eqToString(expr trust.Expression) string {
 	return s.String()
 }
 
-func frtEqToString(eq *trust.FinalReferralTrustEquation) string {
+func frtEqToString(eq *equations.FinalReferralTrustEquation) string {
 	return rToString(eq.R) + " = " + eqToString(eq.Expression)
 }
 
@@ -83,7 +84,7 @@ func (s *expressionStringer) VisitConsensusListStart(count int) (err error) {
 	return nil
 }
 
-func (s *expressionStringer) VisitConsensusList(index int, equation trust.Expression) (err error) {
+func (s *expressionStringer) VisitConsensusList(index int, equation equations.Expression) (err error) {
 	eqStr := eqToString(equation)
 
 	if index == 0 {

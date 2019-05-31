@@ -1,9 +1,10 @@
-package trust
+package equations
 
 import (
 	"errors"
 
 	"github.com/dimchansky/ebsl-go/opinion"
+	"github.com/dimchansky/ebsl-go/trust"
 )
 
 var (
@@ -11,8 +12,8 @@ var (
 )
 
 type ExpressionContext interface {
-	R(link Link) *opinion.Type
-	A(link Link) *opinion.Type
+	R(link trust.Link) *opinion.Type
+	A(link trust.Link) *opinion.Type
 	G(*opinion.Type) float64
 }
 
@@ -51,7 +52,7 @@ func (ev *expressionEvaluator) VisitFullUncertainty() error {
 	return nil
 }
 
-func (ev *expressionEvaluator) VisitDiscountingRule(r Link, a Link) (err error) {
+func (ev *expressionEvaluator) VisitDiscountingRule(r trust.Link, a trust.Link) (err error) {
 	switch ev.state {
 	case notEvaluated:
 		ctx := ev.context
@@ -73,7 +74,7 @@ func (ev *expressionEvaluator) VisitDiscountingRule(r Link, a Link) (err error) 
 	return
 }
 
-func (ev *expressionEvaluator) VisitDirectReferralTrust(a Link) (err error) {
+func (ev *expressionEvaluator) VisitDirectReferralTrust(a trust.Link) (err error) {
 	switch ev.state {
 	case notEvaluated:
 		ctx := ev.context
