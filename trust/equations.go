@@ -1,6 +1,8 @@
 package trust
 
-import "sort"
+import (
+	"sort"
+)
 
 // ExpressionVisitor is A visitor for Expression
 type ExpressionVisitor interface {
@@ -27,13 +29,15 @@ type FinalReferralTrustEquation struct {
 	Expression Expression
 }
 
-func CreateFinalReferralTrustEquations(dro DirectReferralOpinion) []*FinalReferralTrustEquation {
+func CreateFinalReferralTrustEquations(links IterableLinks) []*FinalReferralTrustEquation {
 	type uint64Set map[uint64]bool
 
 	uniques := make(uint64Set)
 	referralsTo := make(map[uint64]uint64Set)
 
-	for ref := range dro {
+	foreachLink := links.GetLinkIterator()
+	// build graph with referrals and uniques
+	_ = foreachLink(func(ref Link) error {
 		from := ref.From
 		to := ref.To
 
@@ -50,7 +54,9 @@ func CreateFinalReferralTrustEquations(dro DirectReferralOpinion) []*FinalReferr
 			referralsTo[to] = referrals
 		}
 		referrals[from] = true
-	}
+
+		return nil
+	})
 
 	// TODO: optimize for all nodes
 	isReachable := func(from, to uint64) bool {
