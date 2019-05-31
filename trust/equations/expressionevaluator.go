@@ -8,9 +8,11 @@ import (
 )
 
 var (
+	// ErrInvalidExpression is returned when expression is invalid and cannot be evaluated
 	ErrInvalidExpression = errors.New("trust: invalid expression")
 )
 
+// EvaluateExpression evaluates expression using expression context and returns evaluated value or error
 func EvaluateExpression(context ExpressionContext, expression Expression) (*opinion.Type, error) {
 	ev := &expressionEvaluator{context: context}
 	if err := expression.Accept(ev); err != nil {
