@@ -9,15 +9,16 @@ import (
 	"github.com/dimchansky/ebsl-go/opinion"
 	"github.com/dimchansky/ebsl-go/trust"
 	"github.com/dimchansky/ebsl-go/trust/equations"
+	"github.com/dimchansky/ebsl-go/trust/equations/solver"
 )
 
 func TestExample(t *testing.T) {
 	c := uint64(2)
 
 	a := trust.DirectReferralEvidence{
-		trust.Link{From: 1, To: 2}: evidence.New(1, 1),
-		trust.Link{From: 2, To: 3}: evidence.New(1, 1),
-		trust.Link{From: 3, To: 2}: evidence.New(1, 1),
+		trust.Link{From: 1, To: 2}: evidence.New(2, 2),
+		trust.Link{From: 2, To: 3}: evidence.New(2, 2),
+		trust.Link{From: 3, To: 2}: evidence.New(2, 2),
 	}.ToDirectReferralOpinion(c)
 
 	eqs := equations.CreateEquations(a)
@@ -27,12 +28,63 @@ func TestExample(t *testing.T) {
 		a: a,
 		r: make(trust.FinalReferralOpinion),
 	}
-	for i := 1; i <= 10; i++ {
-		t.Log("--- epoch", i)
-		for _, eq := range eqs {
-			rVal, _ := eq.Evaluate(ctx)
-			t.Log(rToString(eq.R), rVal)
-		}
+
+	if err := solver.SolveEquations(ctx, eqs); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestExample2(t *testing.T) {
+	c := uint64(2)
+
+	a := trust.DirectReferralEvidence{
+		trust.Link{From: 1, To: 2}: evidence.New(2, 2),
+		trust.Link{From: 2, To: 3}: evidence.New(2, 2),
+		trust.Link{From: 3, To: 4}: evidence.New(2, 2),
+		trust.Link{From: 3, To: 5}: evidence.New(2, 2),
+		trust.Link{From: 4, To: 5}: evidence.New(2, 2),
+		trust.Link{From: 4, To: 6}: evidence.New(2, 2),
+		trust.Link{From: 5, To: 6}: evidence.New(2, 2),
+		trust.Link{From: 6, To: 7}: evidence.New(2, 2),
+	}.ToDirectReferralOpinion(c)
+
+	eqs := equations.CreateEquations(a)
+	logEquations(t, eqs)
+
+	ctx := &ctx{
+		a: a,
+		r: make(trust.FinalReferralOpinion),
+	}
+
+	if err := solver.SolveEquations(ctx, eqs); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestExample3(t *testing.T) {
+	c := uint64(2)
+
+	a := trust.DirectReferralEvidence{
+		trust.Link{From: 1, To: 2}: evidence.New(2, 2),
+		trust.Link{From: 2, To: 3}: evidence.New(2, 2),
+		trust.Link{From: 3, To: 4}: evidence.New(2, 2),
+		trust.Link{From: 4, To: 5}: evidence.New(2, 2),
+		trust.Link{From: 5, To: 6}: evidence.New(2, 2),
+		trust.Link{From: 6, To: 7}: evidence.New(2, 2),
+		trust.Link{From: 7, To: 8}: evidence.New(2, 2),
+		trust.Link{From: 8, To: 9}: evidence.New(2, 2),
+	}.ToDirectReferralOpinion(c)
+
+	eqs := equations.CreateEquations(a)
+	logEquations(t, eqs)
+
+	ctx := &ctx{
+		a: a,
+		r: make(trust.FinalReferralOpinion),
+	}
+
+	if err := solver.SolveEquations(ctx, eqs); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -62,23 +114,6 @@ func (c *ctx) GetDiscount(o *opinion.Type) float64 {
 
 func (c *ctx) SetFinalReferralTrust(link trust.Link, value *opinion.Type) {
 	c.r[link] = value
-}
-
-func TestExample2(t *testing.T) {
-	c := uint64(2)
-
-	a := trust.DirectReferralEvidence{
-		trust.Link{From: 1, To: 2}: evidence.New(1, 1),
-		trust.Link{From: 2, To: 3}: evidence.New(1, 1),
-		trust.Link{From: 3, To: 4}: evidence.New(1, 1),
-		trust.Link{From: 3, To: 5}: evidence.New(1, 1),
-		trust.Link{From: 4, To: 5}: evidence.New(1, 1),
-		trust.Link{From: 4, To: 6}: evidence.New(1, 1),
-		trust.Link{From: 5, To: 6}: evidence.New(1, 1),
-		trust.Link{From: 6, To: 7}: evidence.New(1, 1),
-	}.ToDirectReferralOpinion(c)
-
-	logEquations(t, equations.CreateEquations(a))
 }
 
 func logEquations(t *testing.T, eqs []*equations.Equation) {

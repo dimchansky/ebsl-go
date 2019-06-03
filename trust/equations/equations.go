@@ -34,6 +34,9 @@ type Equation struct {
 	Expression Expression
 }
 
+// Equations is a set of final referral trust equation
+type Equations []*Equation
+
 // ExpressionContext to evaluate expression of final referral trust equation
 type ExpressionContext interface {
 	GetDirectReferralTrust(link trust.Link) *opinion.Type
@@ -58,7 +61,7 @@ func (e *Equation) Evaluate(context Context) (res *opinion.Type, err error) {
 }
 
 // CreateEquations creates equations for the final referral trust
-func CreateEquations(links trust.IterableLinks) []*Equation {
+func CreateEquations(links trust.IterableLinks) Equations {
 	uniques, referralsTo := getUniquesAndReferralsTo(links)
 
 	// TODO: optimize for all nodes
@@ -87,7 +90,7 @@ func CreateEquations(links trust.IterableLinks) []*Equation {
 		return false
 	}
 
-	var rEquations []*Equation
+	var rEquations Equations
 	// generate equations for final referral trust (R)
 	for from := range uniques {
 		for to, referrals := range referralsTo {
@@ -123,7 +126,7 @@ func CreateEquations(links trust.IterableLinks) []*Equation {
 }
 
 // orderEquationsByDirectRefAndIndices orders equations so that direct referral equations go first and the all equations are ordered by indices of R
-func orderEquationsByDirectRefAndIndices(rEquations []*Equation) {
+func orderEquationsByDirectRefAndIndices(rEquations Equations) {
 	sort.Slice(rEquations, func(i, j int) bool {
 		iEq := rEquations[i]
 		jEq := rEquations[j]
