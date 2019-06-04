@@ -1,6 +1,8 @@
 package equations
 
 import (
+	"fmt"
+
 	"github.com/dimchansky/ebsl-go/opinion"
 	"github.com/dimchansky/ebsl-go/trust"
 )
@@ -56,6 +58,41 @@ func (e *Equation) Evaluate(context Context) (res *opinion.Type, err error) {
 		context.SetFinalReferralTrust(e.R, res)
 	}
 	return res, err
+}
+
+type DefaultContext struct {
+	DirectReferralTrust trust.DirectReferralOpinion
+	FinalReferralTrust  trust.FinalReferralOpinion
+}
+
+func NewDefaultContext(a trust.DirectReferralOpinion) *DefaultContext {
+	return &DefaultContext{
+		DirectReferralTrust: a,
+		FinalReferralTrust:  make(trust.FinalReferralOpinion),
+	}
+}
+
+func (c *DefaultContext) GetDirectReferralTrust(link trust.Link) *opinion.Type {
+	res, ok := c.DirectReferralTrust[link]
+	if !ok {
+		panic(fmt.Sprintf("direct referral trust not found: [%v, %v]", link.From, link.To))
+	}
+	return res
+}
+
+func (c *DefaultContext) GetFinalReferralTrust(link trust.Link) *opinion.Type {
+	if res, ok := c.FinalReferralTrust[link]; ok {
+		return res
+	}
+	return opinion.FullBelief()
+}
+
+func (c *DefaultContext) GetDiscount(o *opinion.Type) float64 {
+	return o.B
+}
+
+func (c *DefaultContext) SetFinalReferralTrust(link trust.Link, value *opinion.Type) {
+	c.FinalReferralTrust[link] = value
 }
 
 // CreateEquations creates equations for the final referral trust
