@@ -1,8 +1,6 @@
 package equations
 
 import (
-	"sort"
-
 	"github.com/dimchansky/ebsl-go/opinion"
 	"github.com/dimchansky/ebsl-go/trust"
 )
@@ -119,32 +117,7 @@ func CreateEquations(links trust.IterableLinks) Equations {
 		}
 	}
 
-	// order equations by direct first, then by indices
-	orderEquationsByDirectRefAndIndices(rEquations)
-
 	return rEquations
-}
-
-// orderEquationsByDirectRefAndIndices orders equations so that direct referral equations go first and the all equations are ordered by indices of R
-func orderEquationsByDirectRefAndIndices(rEquations Equations) {
-	sort.Slice(rEquations, func(i, j int) bool {
-		iEq := rEquations[i]
-		jEq := rEquations[j]
-		iExpDirect := iEq.Expression.IsDirectReferralTrust()
-		jExpDirect := jEq.Expression.IsDirectReferralTrust()
-		if iExpDirect != jExpDirect {
-			return iExpDirect // direct equations go first
-		}
-
-		// the sort by R indices
-		iFrom := iEq.R.From
-		jFrom := jEq.R.From
-		if iFrom != jFrom {
-			return iFrom < jFrom
-		}
-
-		return iEq.R.To < jEq.R.To
-	})
 }
 
 type uint64Set map[uint64]bool

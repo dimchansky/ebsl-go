@@ -2,8 +2,8 @@ package solver
 
 import (
 	"errors"
-	"fmt"
 	"math"
+	"sort"
 
 	"github.com/dimchansky/ebsl-go/opinion"
 	"github.com/dimchansky/ebsl-go/trust/equations"
@@ -13,22 +13,29 @@ var (
 	ErrEpochMustBePositiveNumber = errors.New("solver: epoch must be positive number")
 )
 
-type distanceAggregator interface {
+type DistanceFun func(prevValue *opinion.Type, newValue *opinion.Type) float64
+
+type DistanceAggregator interface {
 	Reset()
 	Add(float64)
 	Result() float64
 }
 
+type EpochStartFun func(epoch uint) error
+type EpochEndFun func(epoch uint, aggregatedDistance float64) error
+
 type options struct {
 	epochs             uint
-	distanceFun        func(prevValue *opinion.Type, newValue *opinion.Type) float64
-	distanceAggregator distanceAggregator
+	distanceFun        DistanceFun
+	distanceAggregator DistanceAggregator
 	tolerance          float64
+	onEpochStart       EpochStartFun
+	onEpochEnd         EpochEndFun
 }
 
 type Options func(opts *options) (*options, error)
 
-func Epochs(epochs uint) Options {
+func UseMaxEpochs(epochs uint) Options {
 	return func(opts *options) (*options, error) {
 		if epochs < 1 {
 			return nil, ErrEpochMustBePositiveNumber
@@ -38,30 +45,58 @@ func Epochs(epochs uint) Options {
 	}
 }
 
-func ManhattanDistance() Options {
+func UseManhattanDistance() Options {
 	return func(opts *options) (*options, error) {
 		opts.distanceFun = manhattanDistance
 		return opts, nil
 	}
 }
 
-func ChebyshevDistance() Options {
+func UseChebyshevDistance() Options {
 	return func(opts *options) (*options, error) {
 		opts.distanceFun = chebyshevDistance
 		return opts, nil
 	}
 }
 
-func EuclideanDistance() Options {
+func UseEuclideanDistance() Options {
 	return func(opts *options) (*options, error) {
 		opts.distanceFun = euclideanDistance
 		return opts, nil
 	}
 }
 
-func Tolerance(tolerance float64) Options {
+func UseDistanceFunction(distanceFun DistanceFun) Options {
+	return func(opts *options) (*options, error) {
+		opts.distanceFun = distanceFun
+		return opts, nil
+	}
+}
+
+func UseDistanceAggregator(distanceAggregator DistanceAggregator) Options {
+	return func(opts *options) (*options, error) {
+		opts.distanceAggregator = distanceAggregator
+		return opts, nil
+	}
+}
+
+func UseTolerance(tolerance float64) Options {
 	return func(opts *options) (*options, error) {
 		opts.tolerance = tolerance
+		return opts, nil
+	}
+}
+
+func UseOnEpochStartCallback(onEpochStart EpochStartFun) Options {
+	return func(opts *options) (*options, error) {
+		opts.onEpochStart = onEpochStart
+		return opts, nil
+	}
+}
+
+func UseOnEpochEndCallback(onEpochEnd EpochEndFun) Options {
+	return func(opts *options) (*options, error) {
+		opts.onEpochEnd = onEpochEnd
 		return opts, nil
 	}
 }
@@ -72,6 +107,12 @@ func SolveEquations(context equations.Context, eqs equations.Equations, opts ...
 		distanceFun:        manhattanDistance,
 		distanceAggregator: &maxDistanceAggregator{},
 		tolerance:          0.0,
+		onEpochStart: func(epoch uint) error {
+			return nil
+		},
+		onEpochEnd: func(epoch uint, aggregatedDistance float64) error {
+			return nil
+		},
 	}
 
 	// apply solver options
@@ -82,13 +123,20 @@ func SolveEquations(context equations.Context, eqs equations.Equations, opts ...
 		}
 	}
 
+	// order equations by direct first, then by indices
+	orderEquationsByDirectRefAndIndices(eqs)
+
 	epochs := solverOpts.epochs
 	distanceFun := solverOpts.distanceFun
 	distanceAggregator := solverOpts.distanceAggregator
 	tolerance := solverOpts.tolerance
+	onEpochStart := solverOpts.onEpochStart
+	onEpochEnd := solverOpts.onEpochEnd
 
 	for epoch := uint(1); epoch <= epochs; epoch++ {
-		fmt.Printf("Epoch: %v\n", epoch) // TODO: add callback
+		if err := onEpochStart(epoch); err != nil {
+			return err
+		}
 
 		distanceAggregator.Reset()
 		for _, eq := range eqs {
@@ -104,7 +152,9 @@ func SolveEquations(context equations.Context, eqs equations.Equations, opts ...
 			distanceAggregator.Add(dist)
 		}
 		distError := distanceAggregator.Result()
-		fmt.Printf("Epoch %v error: %v\n", epoch, distError) // TODO: add callback
+		if err := onEpochEnd(epoch, distError); err != nil {
+			return err
+		}
 
 		if distError <= tolerance {
 			return nil
@@ -112,6 +162,28 @@ func SolveEquations(context equations.Context, eqs equations.Equations, opts ...
 	}
 
 	return nil
+}
+
+// orderEquationsByDirectRefAndIndices orders equations so that direct referral equations go first and the all equations are ordered by indices of R
+func orderEquationsByDirectRefAndIndices(rEquations equations.Equations) {
+	sort.Slice(rEquations, func(i, j int) bool {
+		iEq := rEquations[i]
+		jEq := rEquations[j]
+		iExpDirect := iEq.Expression.IsDirectReferralTrust()
+		jExpDirect := jEq.Expression.IsDirectReferralTrust()
+		if iExpDirect != jExpDirect {
+			return iExpDirect // direct equations go first
+		}
+
+		// the sort by R indices
+		iFrom := iEq.R.From
+		jFrom := jEq.R.From
+		if iFrom != jFrom {
+			return iFrom < jFrom
+		}
+
+		return iEq.R.To < jEq.R.To
+	})
 }
 
 func manhattanDistance(prevValue *opinion.Type, newValue *opinion.Type) float64 {

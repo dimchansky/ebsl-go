@@ -29,7 +29,12 @@ func TestExample(t *testing.T) {
 		r: make(trust.FinalReferralOpinion),
 	}
 
-	if err := solver.SolveEquations(ctx, eqs); err != nil {
+	if err := solver.SolveEquations(ctx, eqs,
+		solver.UseOnEpochEndCallback(func(epoch uint, aggregatedDistance float64) error {
+			t.Logf("Epoch %v error: %v\n", epoch, aggregatedDistance)
+			return nil
+		}),
+	); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -56,7 +61,12 @@ func TestExample2(t *testing.T) {
 		r: make(trust.FinalReferralOpinion),
 	}
 
-	if err := solver.SolveEquations(ctx, eqs); err != nil {
+	if err := solver.SolveEquations(ctx, eqs,
+		solver.UseOnEpochEndCallback(func(epoch uint, aggregatedDistance float64) error {
+			t.Logf("Epoch %v error: %v\n", epoch, aggregatedDistance)
+			return nil
+		}),
+	); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -83,7 +93,12 @@ func TestExample3(t *testing.T) {
 		r: make(trust.FinalReferralOpinion),
 	}
 
-	if err := solver.SolveEquations(ctx, eqs); err != nil {
+	if err := solver.SolveEquations(ctx, eqs,
+		solver.UseOnEpochEndCallback(func(epoch uint, aggregatedDistance float64) error {
+			t.Logf("Epoch %v error: %v\n", epoch, aggregatedDistance)
+			return nil
+		}),
+	); err != nil {
 		t.Fatal(err)
 	}
 }
