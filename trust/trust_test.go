@@ -23,8 +23,10 @@ func TestExample(t *testing.T) {
 	eqs := equations.CreateEquations(a)
 	logEquations(t, eqs)
 
+	context := equations.NewDefaultContext(a)
+
 	if err := solver.SolveEquations(
-		equations.NewDefaultContext(a),
+		context,
 		eqs,
 		solver.UseOnEpochEndCallback(func(epoch uint, aggregatedDistance float64) error {
 			t.Logf("Epoch %v error: %v\n", epoch, aggregatedDistance)
@@ -33,6 +35,8 @@ func TestExample(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
+
+	logDiscountValues(t, context)
 }
 
 func TestExample2(t *testing.T) {
@@ -42,18 +46,16 @@ func TestExample2(t *testing.T) {
 		trust.Link{From: 1, To: 2}: evidence.New(2, 2),
 		trust.Link{From: 2, To: 3}: evidence.New(2, 2),
 		trust.Link{From: 3, To: 4}: evidence.New(2, 2),
-		trust.Link{From: 3, To: 5}: evidence.New(2, 2),
-		trust.Link{From: 4, To: 5}: evidence.New(2, 2),
-		trust.Link{From: 4, To: 6}: evidence.New(2, 2),
-		trust.Link{From: 5, To: 6}: evidence.New(2, 2),
-		trust.Link{From: 6, To: 7}: evidence.New(2, 2),
+		trust.Link{From: 4, To: 1}: evidence.New(2, 2),
 	}.ToDirectReferralOpinion(c)
 
 	eqs := equations.CreateEquations(a)
 	logEquations(t, eqs)
 
+	context := equations.NewDefaultContext(a)
+
 	if err := solver.SolveEquations(
-		equations.NewDefaultContext(a),
+		context,
 		eqs,
 		solver.UseOnEpochEndCallback(func(epoch uint, aggregatedDistance float64) error {
 			t.Logf("Epoch %v error: %v\n", epoch, aggregatedDistance)
@@ -62,6 +64,8 @@ func TestExample2(t *testing.T) {
 	); err != nil {
 		t.Fatal(err)
 	}
+
+	logDiscountValues(t, context)
 }
 
 func TestExample3(t *testing.T) {
@@ -76,13 +80,16 @@ func TestExample3(t *testing.T) {
 		trust.Link{From: 6, To: 7}: evidence.New(2, 2),
 		trust.Link{From: 7, To: 8}: evidence.New(2, 2),
 		trust.Link{From: 8, To: 9}: evidence.New(2, 2),
+		trust.Link{From: 9, To: 1}: evidence.New(2, 2),
 	}.ToDirectReferralOpinion(c)
 
 	eqs := equations.CreateEquations(a)
 	logEquations(t, eqs)
 
+	context := equations.NewDefaultContext(a)
+
 	if err := solver.SolveEquations(
-		equations.NewDefaultContext(a),
+		context,
 		eqs,
 		solver.UseOnEpochEndCallback(func(epoch uint, aggregatedDistance float64) error {
 			t.Logf("Epoch %v error: %v\n", epoch, aggregatedDistance)
@@ -90,6 +97,14 @@ func TestExample3(t *testing.T) {
 		}),
 	); err != nil {
 		t.Fatal(err)
+	}
+
+	logDiscountValues(t, context)
+}
+
+func logDiscountValues(t *testing.T, context *equations.DefaultContext) {
+	for key, value := range context.FinalReferralTrust {
+		t.Logf("g[R[%v,%v]] = %v\n", key.From, key.To, context.GetDiscount(value))
 	}
 }
 
