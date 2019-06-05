@@ -87,7 +87,11 @@ func UseOnEpochEndCallback(onEpochEnd EpochEndFun) Options {
 	}
 }
 
-func SolveEquations(context equations.FinalReferralTrustEquationContext, eqs equations.FinalReferralTrustEquations, opts ...Options) (err error) {
+func SolveFinalReferralTrustEquations(
+	context equations.FinalReferralTrustEquationContext,
+	eqs equations.FinalReferralTrustEquations,
+	opts ...Options,
+) (err error) {
 	solverOpts := &options{
 		epochs:             100,
 		distanceFun:        manhattanDistance,

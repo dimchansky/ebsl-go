@@ -20,12 +20,12 @@ func TestExample(t *testing.T) {
 		trust.Link{From: 3, To: 2}: evidence.New(2, 2),
 	}.ToDirectReferralOpinion(c)
 
-	eqs := equations.CreateEquations(a)
+	eqs := equations.CreateFinalReferralTrustEquations(a)
 	logEquations(t, eqs)
 
-	context := equations.NewDefaultContext(a)
+	context := equations.NewDefaultFinalReferralTrustEquationContext(a)
 
-	if err := solver.SolveEquations(
+	if err := solver.SolveFinalReferralTrustEquations(
 		context,
 		eqs,
 		solver.UseOnEpochEndCallback(func(epoch uint, aggregatedDistance float64) error {
@@ -49,12 +49,12 @@ func TestExample2(t *testing.T) {
 		trust.Link{From: 4, To: 1}: evidence.New(2, 2),
 	}.ToDirectReferralOpinion(c)
 
-	eqs := equations.CreateEquations(a)
+	eqs := equations.CreateFinalReferralTrustEquations(a)
 	logEquations(t, eqs)
 
-	context := equations.NewDefaultContext(a)
+	context := equations.NewDefaultFinalReferralTrustEquationContext(a)
 
-	if err := solver.SolveEquations(
+	if err := solver.SolveFinalReferralTrustEquations(
 		context,
 		eqs,
 		solver.UseOnEpochEndCallback(func(epoch uint, aggregatedDistance float64) error {
@@ -82,12 +82,12 @@ func TestExample3(t *testing.T) {
 		trust.Link{From: 6, To: 7}: evidence.New(5, 5),
 	}.ToDirectReferralOpinion(c)
 
-	eqs := equations.CreateEquations(a)
+	eqs := equations.CreateFinalReferralTrustEquations(a)
 	logEquations(t, eqs)
 
-	context := equations.NewDefaultContext(a)
+	context := equations.NewDefaultFinalReferralTrustEquationContext(a)
 
-	if err := solver.SolveEquations(
+	if err := solver.SolveFinalReferralTrustEquations(
 		context,
 		eqs,
 		solver.UseOnEpochEndCallback(func(epoch uint, aggregatedDistance float64) error {
@@ -101,7 +101,7 @@ func TestExample3(t *testing.T) {
 	logDiscountValues(t, context)
 }
 
-func logDiscountValues(t *testing.T, context *equations.DefaultContext) {
+func logDiscountValues(t *testing.T, context *equations.DefaultFinalReferralTrustEquationContext) {
 	for key, value := range context.FinalReferralTrust {
 		t.Logf("g[R[%v,%v]] = %v\n", key.From, key.To, context.GetDiscount(value))
 	}

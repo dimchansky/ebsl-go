@@ -60,19 +60,19 @@ func (e *FinalReferralTrustEquation) EvaluateFinalReferralTrust(context FinalRef
 	return res, err
 }
 
-type DefaultContext struct {
+type DefaultFinalReferralTrustEquationContext struct {
 	DirectReferralTrust trust.DirectReferralOpinion
 	FinalReferralTrust  trust.FinalReferralOpinion
 }
 
-func NewDefaultContext(a trust.DirectReferralOpinion) *DefaultContext {
-	return &DefaultContext{
+func NewDefaultFinalReferralTrustEquationContext(a trust.DirectReferralOpinion) *DefaultFinalReferralTrustEquationContext {
+	return &DefaultFinalReferralTrustEquationContext{
 		DirectReferralTrust: a,
 		FinalReferralTrust:  make(trust.FinalReferralOpinion),
 	}
 }
 
-func (c *DefaultContext) GetDirectReferralTrust(link trust.Link) *opinion.Type {
+func (c *DefaultFinalReferralTrustEquationContext) GetDirectReferralTrust(link trust.Link) *opinion.Type {
 	res, ok := c.DirectReferralTrust[link]
 	if !ok {
 		panic(fmt.Sprintf("direct referral trust not found: [%v, %v]", link.From, link.To))
@@ -80,23 +80,23 @@ func (c *DefaultContext) GetDirectReferralTrust(link trust.Link) *opinion.Type {
 	return res
 }
 
-func (c *DefaultContext) GetFinalReferralTrust(link trust.Link) *opinion.Type {
+func (c *DefaultFinalReferralTrustEquationContext) GetFinalReferralTrust(link trust.Link) *opinion.Type {
 	if res, ok := c.FinalReferralTrust[link]; ok {
 		return res
 	}
 	return opinion.FullBelief()
 }
 
-func (c *DefaultContext) GetDiscount(o *opinion.Type) float64 {
+func (c *DefaultFinalReferralTrustEquationContext) GetDiscount(o *opinion.Type) float64 {
 	return o.B
 }
 
-func (c *DefaultContext) SetFinalReferralTrust(link trust.Link, value *opinion.Type) {
+func (c *DefaultFinalReferralTrustEquationContext) SetFinalReferralTrust(link trust.Link, value *opinion.Type) {
 	c.FinalReferralTrust[link] = value
 }
 
-// CreateEquations creates equations for the final referral trust
-func CreateEquations(links trust.IterableLinks) FinalReferralTrustEquations {
+// CreateFinalReferralTrustEquations creates equations for the final referral trust
+func CreateFinalReferralTrustEquations(links trust.IterableLinks) FinalReferralTrustEquations {
 	uniques, referralsTo := getUniquesAndReferralsTo(links)
 
 	// TODO: optimize for all nodes
