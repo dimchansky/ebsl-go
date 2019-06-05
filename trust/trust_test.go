@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/dimchansky/ebsl-go/evidence"
+	"github.com/dimchansky/ebsl-go/opinion"
 	"github.com/dimchansky/ebsl-go/trust"
 	"github.com/dimchansky/ebsl-go/trust/equations"
 	"github.com/dimchansky/ebsl-go/trust/equations/solver"
@@ -99,6 +100,12 @@ func TestExample3(t *testing.T) {
 	}
 
 	logDiscountValues(t, context)
+
+	f1P := equations.EvaluateFinalFunctionalTrust(context, 1,
+		trust.DirectFunctionalTrust{
+			7: opinion.FromEvidence(c, evidence.New(10, 90)),
+		})
+	t.Logf("f1P: %v", f1P)
 }
 
 func logDiscountValues(t *testing.T, context *equations.DefaultFinalReferralTrustEquationContext) {

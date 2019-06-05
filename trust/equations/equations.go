@@ -34,14 +34,16 @@ type FinalReferralTrustEquation struct {
 	Expression FinalReferralTrustExpression
 }
 
-// FinalReferralTrustEquations is a set of final referral trust equation
-type FinalReferralTrustEquations []*FinalReferralTrustEquation
+// FinalFunctionalTrustContext is a context to evaluate final functional trust
+type FinalFunctionalTrustContext interface {
+	GetFinalReferralTrust(link trust.Link) *opinion.Type
+	GetDiscount(*opinion.Type) float64
+}
 
 // FinalReferralTrustExpressionContext to evaluate expression of final referral trust equation
 type FinalReferralTrustExpressionContext interface {
+	FinalFunctionalTrustContext
 	GetDirectReferralTrust(link trust.Link) *opinion.Type
-	GetFinalReferralTrust(link trust.Link) *opinion.Type
-	GetDiscount(*opinion.Type) float64
 }
 
 // FinalReferralTrustEquationContext to evaluate final referral trust equation
@@ -51,6 +53,9 @@ type FinalReferralTrustEquationContext interface {
 	SetFinalReferralTrust(link trust.Link, value *opinion.Type)
 }
 
+// FinalReferralTrustEquations is a set of final referral trust equation
+type FinalReferralTrustEquations []*FinalReferralTrustEquation
+
 // EvaluateFinalReferralTrust evaluates new final referral value from equation expression and updates final referral trust with the new value.
 func (e *FinalReferralTrustEquation) EvaluateFinalReferralTrust(context FinalReferralTrustEquationContext) (res *opinion.Type, err error) {
 	res, err = EvaluateFinalReferralTrustExpression(context, e.Expression)
@@ -58,6 +63,18 @@ func (e *FinalReferralTrustEquation) EvaluateFinalReferralTrust(context FinalRef
 		context.SetFinalReferralTrust(e.R, res)
 	}
 	return res, err
+}
+
+func EvaluateFinalFunctionalTrust(ctx FinalFunctionalTrustContext, of uint64, dft trust.DirectFunctionalTrust) *opinion.Type {
+	res := opinion.FullUncertainty()
+
+	for opinionOf, directOpinion := range dft {
+		alpha := ctx.GetDiscount(ctx.GetFinalReferralTrust(trust.Link{From: of, To: opinionOf}))
+
+		res.PlusMul(alpha, directOpinion)
+	}
+
+	return res
 }
 
 type DefaultFinalReferralTrustEquationContext struct {

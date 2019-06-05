@@ -63,5 +63,8 @@ func (dro DirectReferralOpinion) GetLinkIterator() LinkIterator {
 	}
 }
 
+// DirectFunctionalTrust is the direct opinion about an entity's ability to provide a specific function
+type DirectFunctionalTrust map[uint64]*opinion.Type
+
 // FinalReferralOpinion represents final referral trust matrix in opinion space
 type FinalReferralOpinion map[Link]*opinion.Type
