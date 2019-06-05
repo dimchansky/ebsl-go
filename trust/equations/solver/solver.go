@@ -45,26 +45,12 @@ func UseMaxEpochs(epochs uint) Options {
 	}
 }
 
-func UseManhattanDistance() Options {
-	return func(opts *options) (*options, error) {
-		opts.distanceFun = manhattanDistance
-		return opts, nil
-	}
-}
+func UseManhattanDistance() Options { return UseDistanceFunction(manhattanDistance) }
+func UseChebyshevDistance() Options { return UseDistanceFunction(chebyshevDistance) }
+func UseEuclideanDistance() Options { return UseDistanceFunction(euclideanDistance) }
 
-func UseChebyshevDistance() Options {
-	return func(opts *options) (*options, error) {
-		opts.distanceFun = chebyshevDistance
-		return opts, nil
-	}
-}
-
-func UseEuclideanDistance() Options {
-	return func(opts *options) (*options, error) {
-		opts.distanceFun = euclideanDistance
-		return opts, nil
-	}
-}
+func UseMaxDistanceAggregator() Options { return UseDistanceAggregator(&maxDistanceAggregator{}) }
+func UseSumDistanceAggregator() Options { return UseDistanceAggregator(&sumDistanceAggregator{}) }
 
 func UseDistanceFunction(distanceFun DistanceFun) Options {
 	return func(opts *options) (*options, error) {
@@ -232,4 +218,27 @@ func (a *maxDistanceAggregator) Add(v float64) {
 
 func (a *maxDistanceAggregator) Result() float64 {
 	return a.maxDistance
+}
+
+type sumDistanceAggregator struct {
+	nonEmpty    bool
+	sumDistance float64
+}
+
+func (a *sumDistanceAggregator) Reset() {
+	a.nonEmpty = false
+	a.sumDistance = math.MaxFloat64
+}
+
+func (a *sumDistanceAggregator) Add(v float64) {
+	if a.nonEmpty {
+		a.sumDistance += v
+	} else {
+		a.nonEmpty = true
+		a.sumDistance = v
+	}
+}
+
+func (a *sumDistanceAggregator) Result() float64 {
+	return a.sumDistance
 }
