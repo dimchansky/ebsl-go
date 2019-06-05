@@ -72,15 +72,14 @@ func TestExample3(t *testing.T) {
 	c := uint64(2)
 
 	a := trust.DirectReferralEvidence{
-		trust.Link{From: 1, To: 2}: evidence.New(2, 2),
-		trust.Link{From: 2, To: 3}: evidence.New(2, 2),
-		trust.Link{From: 3, To: 4}: evidence.New(2, 2),
-		trust.Link{From: 4, To: 5}: evidence.New(2, 2),
-		trust.Link{From: 5, To: 6}: evidence.New(2, 2),
-		trust.Link{From: 6, To: 7}: evidence.New(2, 2),
-		trust.Link{From: 7, To: 8}: evidence.New(2, 2),
-		trust.Link{From: 8, To: 9}: evidence.New(2, 2),
-		trust.Link{From: 9, To: 1}: evidence.New(2, 2),
+		trust.Link{From: 1, To: 2}: evidence.New(400, 300),
+		trust.Link{From: 2, To: 3}: evidence.New(10, 5),
+		trust.Link{From: 3, To: 4}: evidence.New(500, 0),
+		trust.Link{From: 3, To: 5}: evidence.New(500, 0),
+		trust.Link{From: 4, To: 5}: evidence.New(500, 0),
+		trust.Link{From: 4, To: 6}: evidence.New(500, 0),
+		trust.Link{From: 5, To: 6}: evidence.New(500, 0),
+		trust.Link{From: 6, To: 7}: evidence.New(5, 5),
 	}.ToDirectReferralOpinion(c)
 
 	eqs := equations.CreateEquations(a)
@@ -108,7 +107,7 @@ func logDiscountValues(t *testing.T, context *equations.DefaultContext) {
 	}
 }
 
-func logEquations(t *testing.T, eqs []*equations.Equation) {
+func logEquations(t *testing.T, eqs []*equations.FinalReferralTrustEquation) {
 	for _, eq := range eqs {
 		t.Log(frtEqToString(eq))
 	}
@@ -118,7 +117,7 @@ func rToString(r trust.Link) string { return fmt.Sprintf("R[%v,%v]", r.From, r.T
 
 func aToString(a trust.Link) string { return fmt.Sprintf("A[%v,%v]", a.From, a.To) }
 
-func eqToString(expr equations.Expression) string {
+func eqToString(expr equations.FinalReferralTrustExpression) string {
 	s := &expressionStringer{}
 	if err := expr.Accept(s); err != nil {
 		return err.Error()
@@ -126,7 +125,7 @@ func eqToString(expr equations.Expression) string {
 	return s.String()
 }
 
-func frtEqToString(eq *equations.Equation) string {
+func frtEqToString(eq *equations.FinalReferralTrustEquation) string {
 	return rToString(eq.R) + " = " + eqToString(eq.Expression)
 }
 
@@ -153,7 +152,7 @@ func (s *expressionStringer) VisitConsensusListStart(count int) (err error) {
 	return nil
 }
 
-func (s *expressionStringer) VisitConsensusList(index int, equation equations.Expression) (err error) {
+func (s *expressionStringer) VisitConsensusList(index int, equation equations.FinalReferralTrustExpression) (err error) {
 	eqStr := eqToString(equation)
 
 	if index == 0 {

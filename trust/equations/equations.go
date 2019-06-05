@@ -7,53 +7,53 @@ import (
 	"github.com/dimchansky/ebsl-go/trust"
 )
 
-// ExpressionVisitor is a visitor for Expression
-type ExpressionVisitor interface {
+// FinalReferralTrustExpressionVisitor is a visitor for FinalReferralTrustExpression
+type FinalReferralTrustExpressionVisitor interface {
 	VisitFullUncertainty() error
 	VisitDiscountingRule(r trust.Link, a trust.Link) error
 	VisitDirectReferralTrust(a trust.Link) error
 	VisitConsensusListStart(count int) error
-	VisitConsensusList(index int, equation Expression) error
+	VisitConsensusList(index int, equation FinalReferralTrustExpression) error
 	VisitConsensusListEnd() error
 }
 
-// Expression represents final referral trust expression
-type Expression interface {
+// FinalReferralTrustExpression represents final referral trust expression
+type FinalReferralTrustExpression interface {
 	IsFullUncertainty() bool
 	IsDiscountingRule() bool
 	IsDirectReferralTrust() bool
 	IsConsensusList() bool
-	Accept(v ExpressionVisitor) error
+	Accept(v FinalReferralTrustExpressionVisitor) error
 }
 
-// Equation represents final referral trust equation: R[i, j] = Expression
-type Equation struct {
+// FinalReferralTrustEquation represents final referral trust equation: R[i, j] = FinalReferralTrustExpression
+type FinalReferralTrustEquation struct {
 	// R represents R[i, j] - i's (possibly indirect) opinion about the trustworthiness of j
 	R trust.Link
-	// Expression of R[i, j]
-	Expression Expression
+	// FinalReferralTrustExpression of R[i, j]
+	Expression FinalReferralTrustExpression
 }
 
-// Equations is a set of final referral trust equation
-type Equations []*Equation
+// FinalReferralTrustEquations is a set of final referral trust equation
+type FinalReferralTrustEquations []*FinalReferralTrustEquation
 
-// ExpressionContext to evaluate expression of final referral trust equation
-type ExpressionContext interface {
+// FinalReferralTrustExpressionContext to evaluate expression of final referral trust equation
+type FinalReferralTrustExpressionContext interface {
 	GetDirectReferralTrust(link trust.Link) *opinion.Type
 	GetFinalReferralTrust(link trust.Link) *opinion.Type
 	GetDiscount(*opinion.Type) float64
 }
 
-// Context to evaluate final referral trust equation
-type Context interface {
-	ExpressionContext
+// FinalReferralTrustEquationContext to evaluate final referral trust equation
+type FinalReferralTrustEquationContext interface {
+	FinalReferralTrustExpressionContext
 	// SetFinalReferralTrust used to update evaluated expression value
 	SetFinalReferralTrust(link trust.Link, value *opinion.Type)
 }
 
-// Evaluate evaluates new final referral value from equation expression and updates final referral trust with the new value.
-func (e *Equation) Evaluate(context Context) (res *opinion.Type, err error) {
-	res, err = EvaluateExpression(context, e.Expression)
+// EvaluateFinalReferralTrust evaluates new final referral value from equation expression and updates final referral trust with the new value.
+func (e *FinalReferralTrustEquation) EvaluateFinalReferralTrust(context FinalReferralTrustEquationContext) (res *opinion.Type, err error) {
+	res, err = EvaluateFinalReferralTrustExpression(context, e.Expression)
 	if err == nil {
 		context.SetFinalReferralTrust(e.R, res)
 	}
@@ -96,7 +96,7 @@ func (c *DefaultContext) SetFinalReferralTrust(link trust.Link, value *opinion.T
 }
 
 // CreateEquations creates equations for the final referral trust
-func CreateEquations(links trust.IterableLinks) Equations {
+func CreateEquations(links trust.IterableLinks) FinalReferralTrustEquations {
 	uniques, referralsTo := getUniquesAndReferralsTo(links)
 
 	// TODO: optimize for all nodes
@@ -125,11 +125,11 @@ func CreateEquations(links trust.IterableLinks) Equations {
 		return false
 	}
 
-	var rEquations Equations
+	var rEquations FinalReferralTrustEquations
 	// generate equations for final referral trust (R)
 	for from := range uniques {
 		for to, referrals := range referralsTo {
-			// construct Expression for R[from,to]
+			// construct FinalReferralTrustExpression for R[from,to]
 			if from == to {
 				// R[from,from] = full belief (skip it)
 				continue
@@ -146,7 +146,7 @@ func CreateEquations(links trust.IterableLinks) Equations {
 
 			if !rExp.IsFullUncertainty() {
 				rEquations = append(rEquations,
-					&Equation{
+					&FinalReferralTrustEquation{
 						R:          trust.Link{From: from, To: to},
 						Expression: rExp,
 					})
@@ -190,21 +190,21 @@ func getUniquesAndReferralsTo(links trust.IterableLinks) (uniques uint64Set, ref
 	return
 }
 
-// Expression represents final referral trust expression
+// FinalReferralTrustExpression represents final referral trust expression
 type expression interface {
-	Expression
+	FinalReferralTrustExpression
 	circlePlus(p expression) expression
 }
 
 // full uncertainty
 type u struct{}
 
-func (u) circlePlus(p expression) expression { return p }
-func (u) IsFullUncertainty() bool            { return true }
-func (u) IsDiscountingRule() bool            { return false }
-func (u) IsDirectReferralTrust() bool        { return false }
-func (u) IsConsensusList() bool              { return false }
-func (u) Accept(v ExpressionVisitor) error   { return v.VisitFullUncertainty() }
+func (u) circlePlus(p expression) expression                 { return p }
+func (u) IsFullUncertainty() bool                            { return true }
+func (u) IsDiscountingRule() bool                            { return false }
+func (u) IsDirectReferralTrust() bool                        { return false }
+func (u) IsConsensusList() bool                              { return false }
+func (u) Accept(v FinalReferralTrustExpressionVisitor) error { return v.VisitFullUncertainty() }
 
 // ⊕ (circlePlus operation on A list)
 type consensusList []expression
@@ -220,7 +220,7 @@ func (l *consensusList) IsFullUncertainty() bool     { return len(*l) == 0 }
 func (l *consensusList) IsDiscountingRule() bool     { return false }
 func (l *consensusList) IsDirectReferralTrust() bool { return false }
 func (l *consensusList) IsConsensusList() bool       { return true }
-func (l *consensusList) Accept(v ExpressionVisitor) (err error) {
+func (l *consensusList) Accept(v FinalReferralTrustExpressionVisitor) (err error) {
 	if err = v.VisitConsensusListStart(len(*l)); err != nil {
 		return
 	}
@@ -246,11 +246,13 @@ func (a a) circlePlus(p expression) expression {
 	return (*consensusList)(&res)
 }
 
-func (a a) IsFullUncertainty() bool          { return false }
-func (a a) IsDiscountingRule() bool          { return false }
-func (a a) IsDirectReferralTrust() bool      { return true }
-func (a a) IsConsensusList() bool            { return false }
-func (a a) Accept(v ExpressionVisitor) error { return v.VisitDirectReferralTrust(trust.Link(a)) }
+func (a a) IsFullUncertainty() bool     { return false }
+func (a a) IsDiscountingRule() bool     { return false }
+func (a a) IsDirectReferralTrust() bool { return true }
+func (a a) IsConsensusList() bool       { return false }
+func (a a) Accept(v FinalReferralTrustExpressionVisitor) error {
+	return v.VisitDirectReferralTrust(trust.Link(a))
+}
 
 // discountingRule R[i,j] ⊠ A[i,j]
 type discountingRule struct {
@@ -267,6 +269,6 @@ func (d discountingRule) IsFullUncertainty() bool     { return false }
 func (d discountingRule) IsDiscountingRule() bool     { return true }
 func (d discountingRule) IsDirectReferralTrust() bool { return false }
 func (d discountingRule) IsConsensusList() bool       { return false }
-func (d discountingRule) Accept(v ExpressionVisitor) error {
+func (d discountingRule) Accept(v FinalReferralTrustExpressionVisitor) error {
 	return v.VisitDiscountingRule(trust.Link(d.r), trust.Link(d.a))
 }

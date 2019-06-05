@@ -12,9 +12,9 @@ var (
 	ErrInvalidExpression = errors.New("trust: invalid expression")
 )
 
-// EvaluateExpression evaluates expression using expression context and returns evaluated value or error
-func EvaluateExpression(context ExpressionContext, expression Expression) (*opinion.Type, error) {
-	ev := &expressionEvaluator{context: context}
+// EvaluateFinalReferralTrustExpression evaluates expression using expression context and returns evaluated value or error
+func EvaluateFinalReferralTrustExpression(context FinalReferralTrustExpressionContext, expression FinalReferralTrustExpression) (*opinion.Type, error) {
+	ev := &frtExpressionEvaluator{context: context}
 	if err := expression.Accept(ev); err != nil {
 		return nil, err
 	}
@@ -32,13 +32,13 @@ const (
 	consensus    evaluatorState = iota
 )
 
-type expressionEvaluator struct {
-	context ExpressionContext
+type frtExpressionEvaluator struct {
+	context FinalReferralTrustExpressionContext
 	result  *opinion.Type
 	state   evaluatorState
 }
 
-func (ev *expressionEvaluator) VisitFullUncertainty() error {
+func (ev *frtExpressionEvaluator) VisitFullUncertainty() error {
 	if ev.state != notEvaluated {
 		return ErrInvalidExpression
 	}
@@ -48,7 +48,7 @@ func (ev *expressionEvaluator) VisitFullUncertainty() error {
 	return nil
 }
 
-func (ev *expressionEvaluator) VisitDiscountingRule(r trust.Link, a trust.Link) (err error) {
+func (ev *frtExpressionEvaluator) VisitDiscountingRule(r trust.Link, a trust.Link) (err error) {
 	switch ev.state {
 	case notEvaluated:
 		ctx := ev.context
@@ -70,7 +70,7 @@ func (ev *expressionEvaluator) VisitDiscountingRule(r trust.Link, a trust.Link) 
 	return
 }
 
-func (ev *expressionEvaluator) VisitDirectReferralTrust(a trust.Link) (err error) {
+func (ev *frtExpressionEvaluator) VisitDirectReferralTrust(a trust.Link) (err error) {
 	switch ev.state {
 	case notEvaluated:
 		ctx := ev.context
@@ -89,7 +89,7 @@ func (ev *expressionEvaluator) VisitDirectReferralTrust(a trust.Link) (err error
 	return
 }
 
-func (ev *expressionEvaluator) VisitConsensusListStart(count int) error {
+func (ev *frtExpressionEvaluator) VisitConsensusListStart(count int) error {
 	if ev.state != notEvaluated {
 		return ErrInvalidExpression
 	}
@@ -99,7 +99,7 @@ func (ev *expressionEvaluator) VisitConsensusListStart(count int) error {
 	return nil
 }
 
-func (ev *expressionEvaluator) VisitConsensusList(index int, equation Expression) error {
+func (ev *frtExpressionEvaluator) VisitConsensusList(index int, equation FinalReferralTrustExpression) error {
 	if ev.state != consensus {
 		return ErrInvalidExpression
 	}
@@ -107,7 +107,7 @@ func (ev *expressionEvaluator) VisitConsensusList(index int, equation Expression
 	return equation.Accept(ev)
 }
 
-func (ev *expressionEvaluator) VisitConsensusListEnd() error {
+func (ev *frtExpressionEvaluator) VisitConsensusListEnd() error {
 	if ev.state != consensus {
 		return ErrInvalidExpression
 	}

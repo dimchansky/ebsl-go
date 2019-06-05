@@ -87,7 +87,7 @@ func UseOnEpochEndCallback(onEpochEnd EpochEndFun) Options {
 	}
 }
 
-func SolveEquations(context equations.Context, eqs equations.Equations, opts ...Options) (err error) {
+func SolveEquations(context equations.FinalReferralTrustEquationContext, eqs equations.FinalReferralTrustEquations, opts ...Options) (err error) {
 	solverOpts := &options{
 		epochs:             100,
 		distanceFun:        manhattanDistance,
@@ -127,7 +127,7 @@ func SolveEquations(context equations.Context, eqs equations.Equations, opts ...
 		distanceAggregator.Reset()
 		for _, eq := range eqs {
 			prevValue := *context.GetFinalReferralTrust(eq.R)
-			newValue, err := eq.Evaluate(context)
+			newValue, err := eq.EvaluateFinalReferralTrust(context)
 			if err != nil {
 				return err
 			}
@@ -151,7 +151,7 @@ func SolveEquations(context equations.Context, eqs equations.Equations, opts ...
 }
 
 // orderEquationsByDirectRefAndIndices orders equations so that direct referral equations go first and the all equations are ordered by indices of R
-func orderEquationsByDirectRefAndIndices(rEquations equations.Equations) {
+func orderEquationsByDirectRefAndIndices(rEquations equations.FinalReferralTrustEquations) {
 	sort.Slice(rEquations, func(i, j int) bool {
 		iEq := rEquations[i]
 		jEq := rEquations[j]
