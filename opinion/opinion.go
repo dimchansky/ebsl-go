@@ -81,6 +81,9 @@ func (x *Type) Plus(y *Type) *Type {
 
 // PlusMul sets x to the x⊕(α·y) and returns x.
 func (x *Type) PlusMul(α float64, y *Type) *Type {
+	if α == 0 {
+		return x
+	}
 	xu := x.U
 	yu := y.U
 	k := yu + α*xu*(1-yu)
