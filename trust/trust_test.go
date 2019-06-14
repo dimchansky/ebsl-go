@@ -108,9 +108,64 @@ func TestExample3(t *testing.T) {
 	t.Logf("f1P: %v", f1P)
 }
 
+func TestExample4(t *testing.T) {
+	c := uint64(2)
+
+	a := trust.DirectReferralEvidence{
+		trust.Link{From: 1, To: 2}: evidence.New(2, 0),
+		trust.Link{From: 2, To: 3}: evidence.New(2, 0),
+		trust.Link{From: 3, To: 4}: evidence.New(2, 0),
+	}.ToDirectReferralOpinion(c)
+
+	eqs := equations.CreateFinalReferralTrustEquations(a)
+	logEquations(t, eqs)
+
+	context := equations.NewDefaultFinalReferralTrustEquationContext(a)
+
+	if err := solver.SolveFinalReferralTrustEquations(
+		context,
+		eqs,
+		solver.UseOnEpochEndCallback(func(epoch uint, aggregatedDistance float64) error {
+			t.Logf("Epoch %v error: %v\n", epoch, aggregatedDistance)
+			return nil
+		}),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	logDiscountValues(t, context)
+}
+
+func TestExample5(t *testing.T) {
+	c := uint64(2)
+
+	a := trust.DirectReferralEvidence{
+		trust.Link{From: 1, To: 2}: evidence.New(2, 0),
+		trust.Link{From: 2, To: 4}: evidence.New(1, 0),
+	}.ToDirectReferralOpinion(c)
+
+	eqs := equations.CreateFinalReferralTrustEquations(a)
+	logEquations(t, eqs)
+
+	context := equations.NewDefaultFinalReferralTrustEquationContext(a)
+
+	if err := solver.SolveFinalReferralTrustEquations(
+		context,
+		eqs,
+		solver.UseOnEpochEndCallback(func(epoch uint, aggregatedDistance float64) error {
+			t.Logf("Epoch %v error: %v\n", epoch, aggregatedDistance)
+			return nil
+		}),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	logDiscountValues(t, context)
+}
+
 func logDiscountValues(t *testing.T, context *equations.DefaultFinalReferralTrustEquationContext) {
 	for key, value := range context.FinalReferralTrust {
-		t.Logf("g[R[%v,%v]] = %v\n", key.From, key.To, context.GetDiscount(value))
+		t.Logf("g[R[%v,%v]] = g[%v] = %v\n", key.From, key.To, value, context.GetDiscount(value))
 	}
 }
 
