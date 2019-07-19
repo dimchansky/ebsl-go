@@ -1,0 +1,1 @@
+    ./ebsl.wls 2 graph1.txt sol1.txt
