@@ -22,6 +22,17 @@ type IterableLinks interface {
 	GetLinkIterator() LinkIterator
 }
 
+// NextEvidenceHandler handles next evidence and returns error
+type NextEvidenceHandler func(Link, *evidence.Type) error
+
+// EvidenceIterator used as `foreach` to handle all evidences
+type EvidenceIterator func(NextEvidenceHandler) error
+
+// IterableEvidences allows to iterate over all evidences
+type IterableEvidences interface {
+	GetEvidenceIterator() EvidenceIterator
+}
+
 // DirectReferralEvidence represents direct referral trust matrix in evidence space
 type DirectReferralEvidence map[Link]*evidence.Type
 
@@ -38,17 +49,37 @@ func (dre DirectReferralEvidence) GetLinkIterator() LinkIterator {
 	}
 }
 
+// GetEvidenceIterator implements IterableEvidences interface
+func (dre DirectReferralEvidence) GetEvidenceIterator() EvidenceIterator {
+	return func(onNext NextEvidenceHandler) error {
+		for link, ev := range dre {
+			if err := onNext(link, ev); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+}
+
 // ToDirectReferralOpinion transforms direct referral trust matrix to opinion space
 func (dre DirectReferralEvidence) ToDirectReferralOpinion(c uint64) DirectReferralOpinion {
-	res := make(DirectReferralOpinion, len(dre))
-	for ref, ev := range dre {
-		res[ref] = opinion.FromEvidence(c, ev)
-	}
-	return res
+	return make(DirectReferralOpinion, len(dre)).
+		FromIterableEvidences(dre, c)
 }
 
 // DirectReferralOpinion represents direct referral trust matrix in opinion space
 type DirectReferralOpinion map[Link]*opinion.Type
+
+// FromIterableEvidences builds DirectReferralOpinion from IterableEvidences
+func (dro DirectReferralOpinion) FromIterableEvidences(evidences IterableEvidences, c uint64) DirectReferralOpinion {
+	foreachEvidence := evidences.GetEvidenceIterator()
+	_ = foreachEvidence(func(link Link, ev *evidence.Type) error {
+		dro[link] = opinion.FromEvidence(c, ev)
+		return nil
+	})
+	return dro
+}
 
 // GetLinkIterator implements IterableLinks interface
 func (dro DirectReferralOpinion) GetLinkIterator() LinkIterator {
