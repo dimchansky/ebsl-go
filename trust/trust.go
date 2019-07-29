@@ -1,6 +1,8 @@
 package trust
 
 import (
+	"fmt"
+
 	"github.com/dimchansky/ebsl-go/evidence"
 	"github.com/dimchansky/ebsl-go/opinion"
 )
@@ -9,6 +11,11 @@ import (
 type Link struct {
 	From uint64
 	To   uint64
+}
+
+// String implements fmt.Stringer interface
+func (l Link) String() string {
+	return fmt.Sprintf("%v -> %v", l.From, l.To)
 }
 
 // NextLinkHandler handles next link and returns error
