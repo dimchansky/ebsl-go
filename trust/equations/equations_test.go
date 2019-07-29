@@ -109,7 +109,7 @@ func (s *expressionStringer) VisitConsensusList(index int, equation equations.Fi
 func (s *expressionStringer) VisitConsensusListEnd() (err error) {
 	sort.Strings(s.consensusList) // sorting consensus list to have consistent result
 	_, err = s.WriteString(strings.Join(s.consensusList, " ⊕ "))
-	return nil
+	return
 }
 
 func rToString(r trust.Link) string { return fmt.Sprintf("R[%v,%v]", r.From, r.To) }
