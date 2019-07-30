@@ -30,6 +30,28 @@ func TestCreateFinalReferralTrustEquations(t *testing.T) {
 				trust.Link{From: 3, To: 2}: "A[3,2]",
 			},
 		},
+		{"2",
+			links{
+				trust.Link{From: 1, To: 2},
+				trust.Link{From: 2, To: 3},
+				trust.Link{From: 3, To: 4},
+				trust.Link{From: 4, To: 1},
+			},
+			strEquations{
+				trust.Link{From: 1, To: 2}: "A[1,2]",
+				trust.Link{From: 1, To: 3}: "(R[1,2] ⊠ A[2,3])",
+				trust.Link{From: 1, To: 4}: "(R[1,3] ⊠ A[3,4])",
+				trust.Link{From: 2, To: 1}: "(R[2,4] ⊠ A[4,1])",
+				trust.Link{From: 2, To: 3}: "A[2,3]",
+				trust.Link{From: 2, To: 4}: "(R[2,3] ⊠ A[3,4])",
+				trust.Link{From: 3, To: 1}: "(R[3,4] ⊠ A[4,1])",
+				trust.Link{From: 3, To: 2}: "(R[3,1] ⊠ A[1,2])",
+				trust.Link{From: 3, To: 4}: "A[3,4]",
+				trust.Link{From: 4, To: 1}: "A[4,1]",
+				trust.Link{From: 4, To: 2}: "(R[4,1] ⊠ A[1,2])",
+				trust.Link{From: 4, To: 3}: "(R[4,2] ⊠ A[2,3])",
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
