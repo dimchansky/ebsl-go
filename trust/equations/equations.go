@@ -135,13 +135,11 @@ func CreateFinalReferralTrustEquations(links trust.IterableLinks) (rEquations Fi
 			}
 		}
 
+		// R[from,from] = full belief (skip it)
+		delete(isReachable, from)
+
 		// generate equations for final referral trust (R)
 		for to := range isReachable {
-			if from == to {
-				// R[from,from] = full belief (skip it)
-				continue
-			}
-
 			var rExp expression = u{}
 			for k := range sinkGraph[to] {
 				if k == from { // diagonal in R equal to full belief
