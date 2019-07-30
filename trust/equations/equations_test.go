@@ -129,6 +129,34 @@ func TestCreateFinalReferralTrustEquations(t *testing.T) {
 	}
 }
 
+var eqs equations.FinalReferralTrustEquations
+
+func BenchmarkCreateFinalReferralTrustEquations(b *testing.B) {
+	for _, nodes := range []uint64{
+		10,
+		20,
+		50,
+		100,
+	} {
+		b.Run(fmt.Sprintf("%v nodes", nodes), func(b *testing.B) {
+			ls := make(links, 0, nodes*(nodes-1))
+			for i := uint64(1); i <= nodes; i++ {
+				for j := uint64(1); j <= nodes; j++ {
+					if i != j {
+						ls = append(ls, trust.Link{From: i, To: j})
+					}
+				}
+			}
+
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				eqs = equations.CreateFinalReferralTrustEquations(ls)
+			}
+		})
+	}
+}
+
 type links []trust.Link
 
 func (l links) GetLinkIterator() trust.LinkIterator {
