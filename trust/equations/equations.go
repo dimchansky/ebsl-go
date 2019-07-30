@@ -113,50 +113,41 @@ func (c *DefaultFinalReferralTrustEquationContext) SetFinalReferralTrust(link tr
 }
 
 // CreateFinalReferralTrustEquations creates equations for the final referral trust
-func CreateFinalReferralTrustEquations(links trust.IterableLinks) FinalReferralTrustEquations {
-	uniques, referralsTo := getUniquesAndReferralsTo(links)
+func CreateFinalReferralTrustEquations(links trust.IterableLinks) (rEquations FinalReferralTrustEquations) {
+	sourceGraph, sinkGraph := buildGraph(links)
 
-	// TODO: optimize for all nodes
-	isReachable := func(from, to uint64) bool {
-		if from == to {
-			return true
-		}
-
-		for visited, stack := map[uint64]bool{to: true}, []uint64{to}; len(stack) > 0; {
+	stack := make([]uint64, 0, len(sinkGraph)) // reusable stack of nodes to visit
+	for from := range sourceGraph {
+		// mark all isReachable nodes from current node
+		isReachable := map[uint64]bool{from: true}
+		stack = append(stack, from)
+		for len(stack) > 0 {
 			n := len(stack) - 1
-			to = stack[n]
+			sourceNode := stack[n]
 			stack = stack[:n]
 
-			for i := range referralsTo[to] {
-				if i == from {
-					return true
-				}
-
-				if !visited[i] {
-					visited[i] = true
-					stack = append(stack, i)
+			sinkNodes := sourceGraph[sourceNode]
+			for sinkNode := range sinkNodes {
+				if !isReachable[sinkNode] {
+					isReachable[sinkNode] = true
+					stack = append(stack, sinkNode)
 				}
 			}
 		}
 
-		return false
-	}
-
-	var rEquations FinalReferralTrustEquations
-	// generate equations for final referral trust (R)
-	for from := range uniques {
-		for to, referrals := range referralsTo {
-			// construct FinalReferralTrustExpression for R[from,to]
+		// generate equations for final referral trust (R)
+		for to := range isReachable {
 			if from == to {
 				// R[from,from] = full belief (skip it)
 				continue
 			}
+
 			var rExp expression = u{}
-			for k := range referrals {
+			for k := range sinkGraph[to] {
 				if k == from { // diagonal in R equal to full belief
 					rExp = rExp.circlePlus(a{From: k, To: to})
 				} else if k != to && // diagonal in A equal to full uncertainty
-					isReachable(from, k) { // should exists path from "from" to "k"
+					isReachable[k] { // should exists path from "from" to "k"
 					rExp = rExp.circlePlus(discountingRule{r{From: from, To: k}, a{From: k, To: to}})
 				}
 			}
@@ -171,35 +162,35 @@ func CreateFinalReferralTrustEquations(links trust.IterableLinks) FinalReferralT
 		}
 	}
 
-	return rEquations
+	return
 }
 
 type uint64Set map[uint64]bool
 
-// getUniquesAndReferralsTo collects all uniques from the links and creates index with referrals to each node
-func getUniquesAndReferralsTo(links trust.IterableLinks) (uniques uint64Set, referralsTo map[uint64]uint64Set) {
-	uniques = make(uint64Set)
-	referralsTo = make(map[uint64]uint64Set)
+// in source graph all keys are source vertexes and values are sink vertexes
+// in sink graph all keys are sink vertexes and values are source vertexes
+func buildGraph(links trust.IterableLinks) (sourceGraph map[uint64]uint64Set, sinkGraph map[uint64]uint64Set) {
+	sourceGraph = make(map[uint64]uint64Set)
+	sinkGraph = make(map[uint64]uint64Set)
 
 	foreachLink := links.GetLinkIterator()
-	// build graph with referrals and uniques
 	_ = foreachLink(func(ref trust.Link) error {
 		from := ref.From
 		to := ref.To
 
-		if !uniques[to] {
-			uniques[to] = true
+		sinkNodes := sourceGraph[from]
+		if sinkNodes == nil {
+			sinkNodes = make(uint64Set)
+			sourceGraph[from] = sinkNodes
 		}
-		if !uniques[from] {
-			uniques[from] = true
-		}
+		sinkNodes[to] = true
 
-		referrals := referralsTo[to]
-		if referrals == nil {
-			referrals = make(uint64Set)
-			referralsTo[to] = referrals
+		sourceNodes := sinkGraph[to]
+		if sourceNodes == nil {
+			sourceNodes = make(uint64Set)
+			sinkGraph[to] = sourceNodes
 		}
-		referrals[from] = true
+		sourceNodes[from] = true
 
 		return nil
 	})
