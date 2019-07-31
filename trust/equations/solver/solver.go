@@ -3,7 +3,6 @@ package solver
 import (
 	"errors"
 	"math"
-	"sort"
 
 	"github.com/dimchansky/ebsl-go/opinion"
 	"github.com/dimchansky/ebsl-go/trust/equations"
@@ -89,7 +88,7 @@ func UseOnEpochEndCallback(onEpochEnd EpochEndFun) Options {
 
 func SolveFinalReferralTrustEquations(
 	context equations.FinalReferralTrustEquationContext,
-	eqs equations.FinalReferralTrustEquations,
+	eqs equations.IterableFinalReferralTrustEquations,
 	opts ...Options,
 ) (err error) {
 	solverOpts := &options{
@@ -113,9 +112,6 @@ func SolveFinalReferralTrustEquations(
 		}
 	}
 
-	// order equations by direct first, then by indices
-	orderEquationsByDirectRefAndIndices(eqs)
-
 	epochs := solverOpts.epochs
 	distanceFun := solverOpts.distanceFun
 	distanceAggregator := solverOpts.distanceAggregator
@@ -129,7 +125,9 @@ func SolveFinalReferralTrustEquations(
 		}
 
 		distanceAggregator.Reset()
-		for _, eq := range eqs {
+
+		foreachEquation := eqs.GetFinalReferralTrustEquationIterator()
+		err = foreachEquation(func(eq *equations.FinalReferralTrustEquation) error {
 			prevValue := *context.GetFinalReferralTrust(eq.R)
 			newValue, err := eq.EvaluateFinalReferralTrust(context)
 			if err != nil {
@@ -140,7 +138,12 @@ func SolveFinalReferralTrustEquations(
 			// fmt.Printf("R[%v,%v]: prev: %v new: %v dist: %v\n", eq.R.From, eq.R.To, prevValue, newValue, dist) // TODO: add callback
 
 			distanceAggregator.Add(dist)
+			return nil
+		})
+		if err != nil {
+			return
 		}
+
 		distError := distanceAggregator.Result()
 		if err := onEpochEnd(epoch, distError); err != nil {
 			return err
@@ -152,28 +155,6 @@ func SolveFinalReferralTrustEquations(
 	}
 
 	return nil
-}
-
-// orderEquationsByDirectRefAndIndices orders equations so that direct referral equations go first and the all equations are ordered by indices of R
-func orderEquationsByDirectRefAndIndices(rEquations equations.FinalReferralTrustEquations) {
-	sort.Slice(rEquations, func(i, j int) bool {
-		iEq := rEquations[i]
-		jEq := rEquations[j]
-		iExpDirect := iEq.Expression.IsDirectReferralTrust()
-		jExpDirect := jEq.Expression.IsDirectReferralTrust()
-		if iExpDirect != jExpDirect {
-			return iExpDirect // direct equations go first
-		}
-
-		// the sort by R indices
-		iFrom := iEq.R.From
-		jFrom := jEq.R.From
-		if iFrom != jFrom {
-			return iFrom < jFrom
-		}
-
-		return iEq.R.To < jEq.R.To
-	})
 }
 
 func manhattanDistance(prevValue *opinion.Type, newValue *opinion.Type) float64 {

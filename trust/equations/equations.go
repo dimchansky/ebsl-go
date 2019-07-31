@@ -53,8 +53,31 @@ type FinalReferralTrustEquationContext interface {
 	SetFinalReferralTrust(link trust.Link, value *opinion.Type)
 }
 
+// NextFinalReferralTrustEquationHandler handles next inal referral trust equation and returns error
+type NextFinalReferralTrustEquationHandler func(*FinalReferralTrustEquation) error
+
+// FinalReferralTrustEquationIterator used as `foreach` to handle all final referral trust equations
+type FinalReferralTrustEquationIterator func(NextFinalReferralTrustEquationHandler) error
+
+// IterableFinalReferralTrustEquations allows to iterate over all final referral trust equations
+type IterableFinalReferralTrustEquations interface {
+	GetFinalReferralTrustEquationIterator() FinalReferralTrustEquationIterator
+}
+
 // FinalReferralTrustEquations is a set of final referral trust equation
 type FinalReferralTrustEquations []*FinalReferralTrustEquation
+
+// GetFinalReferralTrustEquationIterator implements IterableFinalReferralTrustEquations interface
+func (eqs FinalReferralTrustEquations) GetFinalReferralTrustEquationIterator() FinalReferralTrustEquationIterator {
+	return func(onNext NextFinalReferralTrustEquationHandler) error {
+		for _, equation := range eqs {
+			if err := onNext(equation); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
 
 // EvaluateFinalReferralTrust evaluates new final referral value from equation expression and updates final referral trust with the new value.
 func (e *FinalReferralTrustEquation) EvaluateFinalReferralTrust(context FinalReferralTrustEquationContext) (res *opinion.Type, err error) {
