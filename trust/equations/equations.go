@@ -139,53 +139,67 @@ func (c *DefaultFinalReferralTrustEquationContext) SetFinalReferralTrust(link tr
 func CreateFinalReferralTrustEquations(links trust.IterableLinks) IterableFinalReferralTrustEquations {
 	sourceGraph, sinkGraph := buildGraph(links)
 
-	var rEquations FinalReferralTrustEquations
+	return iterableEquations{sourceGraph: sourceGraph, sinkGraph: sinkGraph}
+}
 
-	stack := make([]uint64, 0, len(sinkGraph)) // reusable stack of nodes to visit
-	for from := range sourceGraph {
-		// mark all isReachable nodes from current node
-		isReachable := map[uint64]bool{from: true}
-		stack = append(stack, from)
-		for len(stack) > 0 {
-			n := len(stack) - 1
-			sourceNode := stack[n]
-			stack = stack[:n]
+type iterableEquations struct {
+	sourceGraph map[uint64]uint64Set // in source graph all keys are source vertexes and values are sink vertexes
+	sinkGraph   map[uint64]uint64Set // in sink graph all keys are sink vertexes and values are source vertexes
+}
 
-			sinkNodes := sourceGraph[sourceNode]
-			for sinkNode := range sinkNodes {
-				if !isReachable[sinkNode] {
-					isReachable[sinkNode] = true
-					stack = append(stack, sinkNode)
-				}
-			}
-		}
+func (ec iterableEquations) GetFinalReferralTrustEquationIterator() FinalReferralTrustEquationIterator {
+	sourceGraph := ec.sourceGraph
+	sinkGraph := ec.sinkGraph
 
-		// R[from,from] = full belief (skip it)
-		delete(isReachable, from)
+	return func(onNext NextFinalReferralTrustEquationHandler) error {
 
-		// generate equations for final referral trust (R)
-		for to := range isReachable {
-			var rExp expression = u{}
-			for k := range sinkGraph[to] {
-				if k == from { // diagonal in R equal to full belief
-					rExp = rExp.circlePlus(a{From: k, To: to})
-				} else if k != to && // diagonal in A equal to full uncertainty
-					isReachable[k] { // should exists path from "from" to "k"
-					rExp = rExp.circlePlus(discountingRule{r{From: from, To: k}, a{From: k, To: to}})
+		stack := make([]uint64, 0, len(sinkGraph)) // reusable stack of nodes to visit
+		for from := range sourceGraph {
+			// mark all isReachable nodes from current node
+			isReachable := map[uint64]bool{from: true}
+			stack = append(stack, from)
+			for len(stack) > 0 {
+				n := len(stack) - 1
+				sourceNode := stack[n]
+				stack = stack[:n]
+
+				sinkNodes := sourceGraph[sourceNode]
+				for sinkNode := range sinkNodes {
+					if !isReachable[sinkNode] {
+						isReachable[sinkNode] = true
+						stack = append(stack, sinkNode)
+					}
 				}
 			}
 
-			if !rExp.IsFullUncertainty() {
-				rEquations = append(rEquations,
-					&FinalReferralTrustEquation{
+			// R[from,from] = full belief (skip it)
+			delete(isReachable, from)
+
+			// generate equations for final referral trust (R)
+			for to := range isReachable {
+				var rExp expression = u{}
+				for k := range sinkGraph[to] {
+					if k == from { // diagonal in R equal to full belief
+						rExp = rExp.circlePlus(a{From: k, To: to})
+					} else if k != to && // diagonal in A equal to full uncertainty
+						isReachable[k] { // should exists path from "from" to "k"
+						rExp = rExp.circlePlus(discountingRule{r{From: from, To: k}, a{From: k, To: to}})
+					}
+				}
+
+				if !rExp.IsFullUncertainty() {
+					if err := onNext(&FinalReferralTrustEquation{
 						R:          trust.Link{From: from, To: to},
 						Expression: rExp,
-					})
+					}); err != nil {
+						return err
+					}
+				}
 			}
 		}
-	}
 
-	return rEquations
+		return nil
+	}
 }
 
 type uint64Set map[uint64]bool
