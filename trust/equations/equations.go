@@ -136,8 +136,10 @@ func (c *DefaultFinalReferralTrustEquationContext) SetFinalReferralTrust(link tr
 }
 
 // CreateFinalReferralTrustEquations creates equations for the final referral trust
-func CreateFinalReferralTrustEquations(links trust.IterableLinks) (rEquations FinalReferralTrustEquations) {
+func CreateFinalReferralTrustEquations(links trust.IterableLinks) IterableFinalReferralTrustEquations {
 	sourceGraph, sinkGraph := buildGraph(links)
+
+	var rEquations FinalReferralTrustEquations
 
 	stack := make([]uint64, 0, len(sinkGraph)) // reusable stack of nodes to visit
 	for from := range sourceGraph {
@@ -183,7 +185,7 @@ func CreateFinalReferralTrustEquations(links trust.IterableLinks) (rEquations Fi
 		}
 	}
 
-	return
+	return rEquations
 }
 
 type uint64Set map[uint64]bool

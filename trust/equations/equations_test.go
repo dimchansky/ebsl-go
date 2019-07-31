@@ -129,7 +129,7 @@ func TestCreateFinalReferralTrustEquations(t *testing.T) {
 	}
 }
 
-var eqs equations.FinalReferralTrustEquations
+var eqs equations.IterableFinalReferralTrustEquations
 
 func BenchmarkCreateFinalReferralTrustEquations(b *testing.B) {
 	for _, nodes := range []uint64{
@@ -172,11 +172,15 @@ func (l links) GetLinkIterator() trust.LinkIterator {
 
 type strEquations map[trust.Link]string
 
-func toStringEquations(eqs equations.FinalReferralTrustEquations) strEquations {
-	r := make(strEquations, len(eqs))
-	for _, eq := range eqs {
+func toStringEquations(eqs equations.IterableFinalReferralTrustEquations) strEquations {
+	r := make(strEquations)
+
+	foreachEquation := eqs.GetFinalReferralTrustEquationIterator()
+	_ = foreachEquation(func(eq *equations.FinalReferralTrustEquation) error {
 		r[eq.R] = expressionToString(eq.Expression)
-	}
+		return nil
+	})
+
 	return r
 }
 
