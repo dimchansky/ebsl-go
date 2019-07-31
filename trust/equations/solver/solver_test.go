@@ -1,6 +1,7 @@
 package solver_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/dimchansky/ebsl-go/evidence"
@@ -86,6 +87,40 @@ func TestSolveFinalReferralTrustEquations(t *testing.T) {
 
 			if diff := deep.Equal(got, tt.want); diff != nil {
 				t.Errorf("SolveFinalReferralTrustEquations: %v", diff)
+			}
+		})
+	}
+}
+
+func BenchmarkSolveFinalReferralTrustEquations(b *testing.B) {
+	for _, nodes := range []uint64{
+		10,
+		20,
+		50,
+		100,
+	} {
+		b.Run(fmt.Sprintf("%v nodes", nodes), func(b *testing.B) {
+			dro := make(trust.DirectReferralOpinion, nodes*(nodes-1))
+			for i := uint64(1); i <= nodes; i++ {
+				for j := uint64(1); j <= nodes; j++ {
+					if i != j {
+						dro[trust.Link{From: i, To: j}] = opinion.FromEvidence(2, evidence.New(1, 1))
+					}
+				}
+			}
+			eqs := equations.CreateFinalReferralTrustEquations(dro)
+			context := equations.NewDefaultFinalReferralTrustEquationContext(dro)
+
+			b.ReportAllocs()
+			b.ResetTimer()
+			for i := 0; i < b.N; i++ {
+				if err := solver.SolveFinalReferralTrustEquations(
+					context,
+					eqs,
+					solver.UseMaxEpochs(1),
+				); err != nil {
+					b.Fatal(err)
+				}
 			}
 		})
 	}
