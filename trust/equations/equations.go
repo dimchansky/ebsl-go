@@ -2,7 +2,6 @@ package equations
 
 import (
 	"fmt"
-
 	"github.com/dimchansky/ebsl-go/opinion"
 	"github.com/dimchansky/ebsl-go/trust"
 )
@@ -36,14 +35,14 @@ type FinalReferralTrustEquation struct {
 
 // FinalFunctionalTrustContext is a context to evaluate final functional trust
 type FinalFunctionalTrustContext interface {
-	GetFinalReferralTrust(link trust.Link) *opinion.Type
-	GetDiscount(*opinion.Type) float64
+	GetFinalReferralTrust(link trust.Link) opinion.Type
+	GetDiscount(opinion.Type) float64
 }
 
 // FinalReferralTrustExpressionContext to evaluate expression of final referral trust equation
 type FinalReferralTrustExpressionContext interface {
 	FinalFunctionalTrustContext
-	GetDirectReferralTrust(link trust.Link) *opinion.Type
+	GetDirectReferralTrust(link trust.Link) opinion.Type
 }
 
 // FinalReferralTrustEquationContext to evaluate final referral trust equation
@@ -88,13 +87,13 @@ func (e *FinalReferralTrustEquation) EvaluateFinalReferralTrust(context FinalRef
 	return res, err
 }
 
-func EvaluateFinalFunctionalTrust(ctx FinalFunctionalTrustContext, of uint64, dft trust.DirectFunctionalTrust) *opinion.Type {
+func EvaluateFinalFunctionalTrust(ctx FinalFunctionalTrustContext, of uint64, dft trust.DirectFunctionalTrust) opinion.Type {
 	res := opinion.FullUncertainty()
 
 	for opinionOf, directOpinion := range dft {
 		alpha := ctx.GetDiscount(ctx.GetFinalReferralTrust(trust.Link{From: of, To: opinionOf}))
 
-		res.PlusMul(alpha, directOpinion)
+		res.PlusMul(alpha, &directOpinion)
 	}
 
 	return res
@@ -112,7 +111,7 @@ func NewDefaultFinalReferralTrustEquationContext(a trust.DirectReferralOpinion) 
 	}
 }
 
-func (c *DefaultFinalReferralTrustEquationContext) GetDirectReferralTrust(link trust.Link) *opinion.Type {
+func (c *DefaultFinalReferralTrustEquationContext) GetDirectReferralTrust(link trust.Link) opinion.Type {
 	res, ok := c.DirectReferralTrust[link]
 	if !ok {
 		panic(fmt.Sprintf("direct referral trust not found: [%v, %v]", link.From, link.To))
@@ -120,19 +119,19 @@ func (c *DefaultFinalReferralTrustEquationContext) GetDirectReferralTrust(link t
 	return res
 }
 
-func (c *DefaultFinalReferralTrustEquationContext) GetFinalReferralTrust(link trust.Link) *opinion.Type {
+func (c *DefaultFinalReferralTrustEquationContext) GetFinalReferralTrust(link trust.Link) opinion.Type {
 	if res, ok := c.FinalReferralTrust[link]; ok {
 		return res
 	}
 	return opinion.FullBelief()
 }
 
-func (c *DefaultFinalReferralTrustEquationContext) GetDiscount(o *opinion.Type) float64 {
+func (c *DefaultFinalReferralTrustEquationContext) GetDiscount(o opinion.Type) float64 {
 	return o.B
 }
 
 func (c *DefaultFinalReferralTrustEquationContext) SetFinalReferralTrust(link trust.Link, value *opinion.Type) {
-	c.FinalReferralTrust[link] = value
+	c.FinalReferralTrust[link] = *value
 }
 
 // CreateFinalReferralTrustEquations creates equations for the final referral trust

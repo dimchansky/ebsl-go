@@ -30,7 +30,7 @@ type IterableLinks interface {
 }
 
 // NextEvidenceHandler handles next evidence and returns error
-type NextEvidenceHandler func(Link, *evidence.Type) error
+type NextEvidenceHandler func(Link, evidence.Type) error
 
 // EvidenceIterator used as `foreach` to handle all evidences
 type EvidenceIterator func(NextEvidenceHandler) error
@@ -41,7 +41,7 @@ type IterableEvidences interface {
 }
 
 // DirectReferralEvidence represents direct referral trust matrix in evidence space
-type DirectReferralEvidence map[Link]*evidence.Type
+type DirectReferralEvidence map[Link]evidence.Type
 
 // GetLinkIterator implements IterableLinks interface
 func (dre DirectReferralEvidence) GetLinkIterator() LinkIterator {
@@ -76,12 +76,12 @@ func (dre DirectReferralEvidence) ToDirectReferralOpinion(c uint64) DirectReferr
 }
 
 // DirectReferralOpinion represents direct referral trust matrix in opinion space
-type DirectReferralOpinion map[Link]*opinion.Type
+type DirectReferralOpinion map[Link]opinion.Type
 
 // FromIterableEvidences builds DirectReferralOpinion from IterableEvidences
 func (dro DirectReferralOpinion) FromIterableEvidences(evidences IterableEvidences, c uint64) DirectReferralOpinion {
 	foreachEvidence := evidences.GetEvidenceIterator()
-	_ = foreachEvidence(func(link Link, ev *evidence.Type) error {
+	_ = foreachEvidence(func(link Link, ev evidence.Type) error {
 		dro[link] = opinion.FromEvidence(c, ev)
 		return nil
 	})
@@ -102,7 +102,7 @@ func (dro DirectReferralOpinion) GetLinkIterator() LinkIterator {
 }
 
 // DirectFunctionalTrust is the direct opinion about an entity's ability to provide a specific function
-type DirectFunctionalTrust map[uint64]*opinion.Type
+type DirectFunctionalTrust map[uint64]opinion.Type
 
 // FinalReferralOpinion represents final referral trust matrix in opinion space
-type FinalReferralOpinion map[Link]*opinion.Type
+type FinalReferralOpinion map[Link]opinion.Type

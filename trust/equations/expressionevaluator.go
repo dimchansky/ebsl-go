@@ -21,7 +21,7 @@ func EvaluateFinalReferralTrustExpression(context FinalReferralTrustExpressionCo
 	if ev.state != evaluated {
 		return nil, ErrInvalidExpression
 	}
-	return ev.result, nil
+	return &ev.result, nil
 }
 
 type evaluatorState int
@@ -34,7 +34,7 @@ const (
 
 type frtExpressionEvaluator struct {
 	context FinalReferralTrustExpressionContext
-	result  *opinion.Type
+	result  opinion.Type
 	state   evaluatorState
 }
 
@@ -54,16 +54,17 @@ func (ev *frtExpressionEvaluator) VisitDiscountingRule(r trust.Link, a trust.Lin
 		ctx := ev.context
 
 		alpha := ctx.GetDiscount(ctx.GetFinalReferralTrust(r))
-		aOp := *ctx.GetDirectReferralTrust(a)
+		aOp := ctx.GetDirectReferralTrust(a)
 
-		ev.result = aOp.Mul(alpha)
+		ev.result = *aOp.Mul(alpha)
 		ev.state = evaluated
 	case consensus:
 		ctx := ev.context
 
 		alpha := ctx.GetDiscount(ctx.GetFinalReferralTrust(r))
 
-		ev.result.PlusMul(alpha, ctx.GetDirectReferralTrust(a))
+		aOp := ctx.GetDirectReferralTrust(a)
+		ev.result.PlusMul(alpha, &aOp)
 	default:
 		err = ErrInvalidExpression
 	}
@@ -75,14 +76,15 @@ func (ev *frtExpressionEvaluator) VisitDirectReferralTrust(a trust.Link) (err er
 	case notEvaluated:
 		ctx := ev.context
 
-		aOp := *ctx.GetDirectReferralTrust(a)
+		aOp := ctx.GetDirectReferralTrust(a)
 
-		ev.result = &aOp
+		ev.result = aOp
 		ev.state = evaluated
 	case consensus:
 		ctx := ev.context
 
-		ev.result.Plus(ctx.GetDirectReferralTrust(a))
+		aOp := ctx.GetDirectReferralTrust(a)
+		ev.result.Plus(&aOp)
 	default:
 		err = ErrInvalidExpression
 	}

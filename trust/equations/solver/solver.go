@@ -128,7 +128,7 @@ func SolveFinalReferralTrustEquations(
 
 		foreachEquation := eqs.GetFinalReferralTrustEquationIterator()
 		err = foreachEquation(func(eq *equations.FinalReferralTrustEquation) error {
-			prevValue := *context.GetFinalReferralTrust(eq.R)
+			prevValue := context.GetFinalReferralTrust(eq.R)
 			newValue, err := eq.EvaluateFinalReferralTrust(context)
 			if err != nil {
 				return err
