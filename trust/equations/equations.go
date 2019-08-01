@@ -2,6 +2,7 @@ package equations
 
 import (
 	"fmt"
+
 	"github.com/dimchansky/ebsl-go/opinion"
 	"github.com/dimchansky/ebsl-go/trust"
 )
